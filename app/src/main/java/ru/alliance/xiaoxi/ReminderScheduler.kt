@@ -27,7 +27,7 @@ object ReminderScheduler {
         }
     }
 
-    private fun scheduleNext(
+    fun scheduleNext(
         context: Context,
         requestCode: Int,
         hour: Int,
