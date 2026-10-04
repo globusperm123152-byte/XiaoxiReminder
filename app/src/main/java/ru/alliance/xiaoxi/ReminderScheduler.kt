@@ -58,7 +58,9 @@ object ReminderScheduler {
             requestCode = requestCode,
             triggerTime = calendar.timeInMillis,
             hour = hour,
-            minute = minute
+            minute = minute,
+            alarmType = "regular",
+            stage = 0
         )
     }
 
@@ -69,7 +71,44 @@ object ReminderScheduler {
             requestCode = -1,
             triggerTime = System.currentTimeMillis() + 2 * 60 * 1000,
             hour = 0,
-            minute = 0
+            minute = 0,
+            alarmType = "regular",
+            stage = 0
+        )
+    }
+
+    fun scheduleExerciseTimer(
+        context: Context,
+        minutes: Int,
+        stage: Int
+    ) {
+
+        scheduleAlarmClock(
+            context = context,
+            requestCode = if (stage == 1) 1001 else 1002,
+            triggerTime = System.currentTimeMillis() +
+                    minutes * 60 * 1000L,
+            hour = 0,
+            minute = 0,
+            alarmType = "exercise",
+            stage = stage
+        )
+    }
+
+    fun scheduleSnooze(
+        context: Context,
+        minutes: Int
+    ) {
+
+        scheduleAlarmClock(
+            context = context,
+            requestCode = 2001,
+            triggerTime = System.currentTimeMillis() +
+                    minutes * 60 * 1000L,
+            hour = 0,
+            minute = 0,
+            alarmType = "snooze",
+            stage = 0
         )
     }
 
@@ -78,48 +117,56 @@ object ReminderScheduler {
         requestCode: Int,
         triggerTime: Long,
         hour: Int,
-        minute: Int
+        minute: Int,
+        alarmType: String,
+        stage: Int
     ) {
 
         val alarmManager =
-            context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+            context.getSystemService(Context.ALARM_SERVICE)
+                    as AlarmManager
 
         val receiverIntent = Intent(
             context,
             ReminderReceiver::class.java
         ).apply {
+
             putExtra("requestCode", requestCode)
             putExtra("hour", hour)
             putExtra("minute", minute)
+
+            putExtra("alarmType", alarmType)
+            putExtra("stage", stage)
         }
 
-        val receiverPendingIntent = PendingIntent.getBroadcast(
-            context,
-            if (requestCode < 0) 999 else requestCode,
-            receiverIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or
-                    PendingIntent.FLAG_IMMUTABLE
-        )
+        val receiverPendingIntent =
+            PendingIntent.getBroadcast(
+                context,
+                requestCode,
+                receiverIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or
+                        PendingIntent.FLAG_IMMUTABLE
+            )
 
-        // Если пользователь нажмёт системный значок
-        // предстоящего будильника, откроется Сяоси.
         val showIntent = Intent(
             context,
             MainActivity::class.java
         )
 
-        val showPendingIntent = PendingIntent.getActivity(
-            context,
-            5000 + if (requestCode < 0) 999 else requestCode,
-            showIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or
-                    PendingIntent.FLAG_IMMUTABLE
-        )
+        val showPendingIntent =
+            PendingIntent.getActivity(
+                context,
+                5000 + requestCode,
+                showIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or
+                        PendingIntent.FLAG_IMMUTABLE
+            )
 
-        val alarmInfo = AlarmManager.AlarmClockInfo(
-            triggerTime,
-            showPendingIntent
-        )
+        val alarmInfo =
+            AlarmManager.AlarmClockInfo(
+                triggerTime,
+                showPendingIntent
+            )
 
         alarmManager.setAlarmClock(
             alarmInfo,
