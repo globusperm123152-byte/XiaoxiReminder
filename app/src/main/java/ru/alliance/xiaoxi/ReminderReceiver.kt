@@ -18,16 +18,18 @@ class ReminderReceiver : BroadcastReceiver() {
         val hour = intent.getIntExtra("hour", 11)
         val minute = intent.getIntExtra("minute", 0)
 
-        val channelId = "xiaoxi_reminders"
+        val channelId = "xiaoxi_reminders_v2"
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
-                channelId,
-                "Напоминания Сяоси",
-                NotificationManager.IMPORTANCE_HIGH
-            ).apply {
-                description = "Напоминания о рабочих паузах"
-            }
+    channelId,
+    "Напоминания Сяоси",
+    NotificationManager.IMPORTANCE_HIGH
+).apply {
+    description = "Напоминания о рабочих паузах"
+    enableVibration(true)
+    vibrationPattern = longArrayOf(0, 500, 300, 500)
+}
 
             val manager =
                 context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
