@@ -36,20 +36,25 @@ object ReminderScheduler {
         val alarmManager =
             context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
 
-        val intent = Intent(context, ReminderReceiver::class.java).apply {
-    putExtra("requestCode", requestCode)
-    putExtra("hour", hour)
-    putExtra("minute", minute)
-}
+        val intent = Intent(
+            context,
+            ReminderReceiver::class.java
+        ).apply {
+            putExtra("requestCode", requestCode)
+            putExtra("hour", hour)
+            putExtra("minute", minute)
+        }
 
         val pendingIntent = PendingIntent.getBroadcast(
             context,
             requestCode,
             intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            PendingIntent.FLAG_UPDATE_CURRENT or
+                    PendingIntent.FLAG_IMMUTABLE
         )
 
         val calendar = Calendar.getInstance().apply {
+
             set(Calendar.HOUR_OF_DAY, hour)
             set(Calendar.MINUTE, minute)
             set(Calendar.SECOND, 0)
@@ -73,27 +78,33 @@ object ReminderScheduler {
             pendingIntent
         )
     }
-fun scheduleTest(context: Context) {
-    val alarmManager =
-        context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
 
-    val intent = Intent(context, ReminderReceiver::class.java).apply {
-        putExtra("requestCode", - 1)
-        putExtra("hour", 11)
-        putExtra("minute", 0)
+    fun scheduleTest(context: Context) {
+
+        val alarmManager =
+            context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+
+        val intent = Intent(
+            context,
+            ReminderReceiver::class.java
+        ).apply {
+            putExtra("requestCode", -1)
+            putExtra("hour", 0)
+            putExtra("minute", 0)
+        }
+
+        val pendingIntent = PendingIntent.getBroadcast(
+            context,
+            999,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or
+                    PendingIntent.FLAG_IMMUTABLE
+        )
+
+        alarmManager.setExactAndAllowWhileIdle(
+            AlarmManager.RTC_WAKEUP,
+            System.currentTimeMillis() + 2 * 60 * 1000,
+            pendingIntent
+        )
     }
-
-    val pendingIntent = PendingIntent.getBroadcast(
-        context,
-        99,
-        intent,
-        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-    )
-
-    alarmManager.setExactAndAllowWhileIdle(
-        AlarmManager.RTC_WAKEUP,
-        System.currentTimeMillis() + 2 * 60 * 1000,
-        pendingIntent
-    )
-}
 }
