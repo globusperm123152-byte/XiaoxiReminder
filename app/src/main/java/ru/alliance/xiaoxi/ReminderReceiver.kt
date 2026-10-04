@@ -34,22 +34,11 @@ class ReminderReceiver : BroadcastReceiver() {
 
         activityIntent.flags =
             Intent.FLAG_ACTIVITY_NEW_TASK or
-            Intent.FLAG_ACTIVITY_CLEAR_TOP
+                Intent.FLAG_ACTIVITY_CLEAR_TOP
 
-        activityIntent.putExtra(
-            "notificationId",
-            notificationId
-        )
-
-        activityIntent.putExtra(
-            "alarmType",
-            alarmType
-        )
-
-        activityIntent.putExtra(
-            "stage",
-            stage
-        )
+        activityIntent.putExtra("notificationId", notificationId)
+        activityIntent.putExtra("alarmType", alarmType)
+        activityIntent.putExtra("stage", stage)
 
         val activityPendingIntent =
             PendingIntent.getActivity(
@@ -80,9 +69,29 @@ class ReminderReceiver : BroadcastReceiver() {
             alarmType == "xiaoshi_snooze" ->
                 "Пора на отложенный дневной сон"
 
+            alarmType == "qigong" ->
+                "Время сделать Цигун"
+
+            alarmType == "qigong_timer" ->
+                "5 минут Цигун закончились"
+
+            alarmType == "qigong_snooze" ->
+                "Пора сделать отложенный Цигун"
+
             else ->
                 "Пора сделать рабочую паузу"
         }
+
+        val title =
+            if (
+                alarmType == "qigong" ||
+                alarmType == "qigong_timer" ||
+                alarmType == "qigong_snooze"
+            ) {
+                "Цигун"
+            } else {
+                "Сяоси"
+            }
 
         val notification =
             NotificationCompat.Builder(
@@ -92,7 +101,7 @@ class ReminderReceiver : BroadcastReceiver() {
                 .setSmallIcon(
                     android.R.drawable.ic_lock_idle_alarm
                 )
-                .setContentTitle("Сяоси")
+                .setContentTitle(title)
                 .setContentText(text)
                 .setPriority(
                     NotificationCompat.PRIORITY_MAX
@@ -123,7 +132,7 @@ class ReminderReceiver : BroadcastReceiver() {
         } catch (_: SecurityException) {
         }
 
-        // Обычная Сяоси
+        // Следующая Сяоси
         if (
             alarmType == "regular" &&
             requestCode >= 0
@@ -136,10 +145,16 @@ class ReminderReceiver : BroadcastReceiver() {
             )
         }
 
-        // Сяоши в 13:30:
-        // сразу назначаем следующую на следующий рабочий день.
+        // Следующая Сяоши
         if (alarmType == "xiaoshi") {
             ReminderScheduler.scheduleNextXiaoshi(
+                context
+            )
+        }
+
+        // Следующий Цигун
+        if (alarmType == "qigong") {
+            ReminderScheduler.scheduleNextQigong(
                 context
             )
         }
