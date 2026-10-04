@@ -66,11 +66,22 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        layout.addView(title)
-        layout.addView(info)
-        layout.addView(enableButton)
+        val testButton = Button(this).apply {
+    text = "ТЕСТ — УВЕДОМЛЕНИЕ ЧЕРЕЗ 2 МИНУТЫ"
 
-        setContentView(layout)
+    setOnClickListener {
+        ReminderScheduler.scheduleTest(this@MainActivity)
+        text = "ТЕСТ ЗАПУЩЕН ✓"
+        isEnabled = false
+    }
+}
+
+layout.addView(title)
+layout.addView(info)
+layout.addView(enableButton)
+layout.addView(testButton)
+
+setContentView(layout)
     }
 
     private fun enableReminders() {
