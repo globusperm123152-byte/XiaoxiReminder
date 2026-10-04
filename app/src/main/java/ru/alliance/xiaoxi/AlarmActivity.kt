@@ -15,6 +15,7 @@ import android.view.WindowManager
 import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 
 class AlarmActivity : AppCompatActivity() {
@@ -69,7 +70,11 @@ class AlarmActivity : AppCompatActivity() {
                 
                 Пора сделать паузу
                 
+                Первый этап
+                
                 10 минут — закрыть глаза
+                
+                Затем:
                 5 минут — спокойно походить
             """.trimIndent()
 
@@ -78,22 +83,77 @@ class AlarmActivity : AppCompatActivity() {
             gravity = Gravity.CENTER
         }
 
-        val stopButton = Button(this).apply {
-            text = "ПОНЯТНО"
+        val startButton = Button(this).apply {
+            text = "НАЧАТЬ"
             textSize = 20f
 
             setOnClickListener {
                 stopAlarm()
                 removeNotification()
+
+                ReminderScheduler.scheduleExerciseTimer(
+                    context = this@AlarmActivity,
+                    minutes = 10,
+                    stage = 1
+                )
+
                 finish()
+            }
+        }
+
+        val postponeButton = Button(this).apply {
+            text = "ОТЛОЖИТЬ / ПРОПУСТИТЬ"
+            textSize = 17f
+
+            setOnClickListener {
+                showPostponeDialog()
             }
         }
 
         layout.addView(title)
         layout.addView(message)
-        layout.addView(stopButton)
+        layout.addView(startButton)
+        layout.addView(postponeButton)
 
         setContentView(layout)
+    }
+
+    private fun showPostponeDialog() {
+
+        AlertDialog.Builder(this)
+            .setTitle("Сяоси")
+            .setItems(
+                arrayOf(
+                    "Отложить на 10 минут",
+                    "Пропустить сейчас"
+                )
+            ) { dialog, which ->
+
+                when (which) {
+
+                    0 -> {
+                        stopAlarm()
+                        removeNotification()
+
+                        ReminderScheduler.scheduleSnooze(
+                            context = this,
+                            minutes = 10
+                        )
+
+                        finish()
+                    }
+
+                    1 -> {
+                        stopAlarm()
+                        removeNotification()
+                        finish()
+                    }
+                }
+
+                dialog.dismiss()
+            }
+            .setNegativeButton("Отмена", null)
+            .show()
     }
 
     private fun startAlarm() {
@@ -110,15 +170,13 @@ class AlarmActivity : AppCompatActivity() {
             alarmUri
         )
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            ringtone?.audioAttributes =
-                AudioAttributes.Builder()
-                    .setUsage(AudioAttributes.USAGE_ALARM)
-                    .setContentType(
-                        AudioAttributes.CONTENT_TYPE_SONIFICATION
-                    )
-                    .build()
-        }
+        ringtone?.audioAttributes =
+            AudioAttributes.Builder()
+                .setUsage(AudioAttributes.USAGE_ALARM)
+                .setContentType(
+                    AudioAttributes.CONTENT_TYPE_SONIFICATION
+                )
+                .build()
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             ringtone?.isLooping = true
@@ -128,10 +186,13 @@ class AlarmActivity : AppCompatActivity() {
 
         vibrator =
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+
                 getSystemService(
                     VibratorManager::class.java
                 ).defaultVibrator
+
             } else {
+
                 @Suppress("DEPRECATION")
                 getSystemService(VIBRATOR_SERVICE) as Vibrator
             }
@@ -140,13 +201,16 @@ class AlarmActivity : AppCompatActivity() {
             longArrayOf(0, 700, 400, 700, 400)
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+
             vibrator?.vibrate(
                 VibrationEffect.createWaveform(
                     pattern,
                     0
                 )
             )
+
         } else {
+
             @Suppress("DEPRECATION")
             vibrator?.vibrate(pattern, 0)
         }
@@ -159,13 +223,11 @@ class AlarmActivity : AppCompatActivity() {
 
     private fun removeNotification() {
 
-        if (notificationId < 0) {
-            return
+        if (notificationId >= 0) {
+            getSystemService(
+                NotificationManager::class.java
+            ).cancel(notificationId)
         }
-
-        getSystemService(
-            NotificationManager::class.java
-        ).cancel(notificationId)
     }
 
     override fun onDestroy() {
