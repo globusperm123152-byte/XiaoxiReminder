@@ -73,6 +73,7 @@ object ReminderScheduler {
         )
     }
 
+    // Тест обычной Сяоси через 2 минуты
     fun scheduleTest(context: Context) {
 
         scheduleAlarmClock(
@@ -86,6 +87,21 @@ object ReminderScheduler {
         )
     }
 
+    // Тест Сяоши через 2 минуты
+    fun scheduleXiaoshiTest(context: Context) {
+
+        scheduleAlarmClock(
+            context,
+            3004,
+            System.currentTimeMillis() + 2 * 60 * 1000L,
+            0,
+            0,
+            "xiaoshi",
+            0
+        )
+    }
+
+    // Таймер этапов Сяоси
     fun scheduleExerciseTimer(
         context: Context,
         minutes: Int,
@@ -107,6 +123,7 @@ object ReminderScheduler {
         )
     }
 
+    // Отложенная Сяоси
     fun scheduleSnooze(
         context: Context,
         minutes: Int
@@ -124,6 +141,7 @@ object ReminderScheduler {
         )
     }
 
+    // Таймер дневного сна Сяоши
     fun scheduleXiaoshiTimer(
         context: Context,
         minutes: Int
@@ -141,6 +159,7 @@ object ReminderScheduler {
         )
     }
 
+    // Отложенная Сяоши
     fun scheduleXiaoshiSnooze(
         context: Context,
         minutes: Int
