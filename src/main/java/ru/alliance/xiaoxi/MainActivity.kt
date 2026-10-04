@@ -67,7 +67,7 @@ class MainActivity : AppCompatActivity() {
             text = "ВКЛЮЧИТЬ НАПОМИНАНИЯ"
             setOnClickListener {
                 enableExactAlarmsIfNeeded()
-                scheduleReminders()
+ReminderScheduler.scheduleAll(this@MainActivity)
                 text = "НАПОМИНАНИЯ ВКЛЮЧЕНЫ ✓"
             }
         }
