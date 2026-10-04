@@ -68,8 +68,12 @@ class AlarmActivity : AppCompatActivity() {
         }
 
         val title = TextView(this).apply {
-            text =
-                if (isXiaoshi()) "Сяоши" else "Сяоси"
+            text = when {
+                isXiaoshi() -> "Сяоши"
+                isQigong() -> "Цигун"
+                else -> "Сяоси"
+            }
+
             textSize = 42f
             setTextColor(Color.BLACK)
             gravity = Gravity.CENTER
@@ -99,7 +103,9 @@ class AlarmActivity : AppCompatActivity() {
             alarmType == "regular" ||
             alarmType == "snooze" ||
             alarmType == "xiaoshi" ||
-            alarmType == "xiaoshi_snooze"
+            alarmType == "xiaoshi_snooze" ||
+            alarmType == "qigong" ||
+            alarmType == "qigong_snooze"
         ) {
 
             val postponeButton = Button(this).apply {
@@ -126,9 +132,50 @@ class AlarmActivity : AppCompatActivity() {
         )
     }
 
+    private fun isQigong(): Boolean {
+
+        return (
+            alarmType == "qigong" ||
+            alarmType == "qigong_timer" ||
+            alarmType == "qigong_snooze"
+        )
+    }
+
     private fun getMessage(): String {
 
         return when {
+
+            alarmType == "qigong_timer" -> """
+                
+                Цигун завершён ✓
+                
+                5 минут закончились
+                
+                Можно возвращаться к работе
+            """.trimIndent()
+
+            alarmType == "qigong_snooze" -> """
+                
+                Отложенный Цигун
+                
+                Пора сделать практику
+                
+                5 минут
+                
+                Спокойное дыхание и движение
+            """.trimIndent()
+
+            alarmType == "qigong" -> """
+                
+                Время Цигун
+                
+                5 минут
+                
+                Спокойное дыхание
+                и плавные движения
+                
+                Убери телефон и отвлекись от работы
+            """.trimIndent()
 
             alarmType == "xiaoshi_timer" -> """
                 
@@ -208,6 +255,9 @@ class AlarmActivity : AppCompatActivity() {
 
         return when {
 
+            alarmType == "qigong_timer" ->
+                "ГОТОВО"
+
             alarmType == "xiaoshi_timer" ->
                 "ГОТОВО"
 
@@ -228,6 +278,21 @@ class AlarmActivity : AppCompatActivity() {
         removeNotification()
 
         when {
+
+            alarmType == "qigong_timer" -> {
+                finish()
+            }
+
+            alarmType == "qigong" ||
+            alarmType == "qigong_snooze" -> {
+
+                ReminderScheduler.scheduleQigongTimer(
+                    context = this,
+                    minutes = 5
+                )
+
+                finish()
+            }
 
             alarmType == "xiaoshi_timer" -> {
                 finish()
@@ -274,10 +339,14 @@ class AlarmActivity : AppCompatActivity() {
 
     private fun showPostponeDialog() {
 
+        val dialogTitle = when {
+            isXiaoshi() -> "Сяоши"
+            isQigong() -> "Цигун"
+            else -> "Сяоси"
+        }
+
         AlertDialog.Builder(this)
-            .setTitle(
-                if (isXiaoshi()) "Сяоши" else "Сяоси"
-            )
+            .setTitle(dialogTitle)
             .setItems(
                 arrayOf(
                     "Отложить на 10 минут",
@@ -292,21 +361,30 @@ class AlarmActivity : AppCompatActivity() {
                         stopAlarm()
                         removeNotification()
 
-                        if (isXiaoshi()) {
+                        when {
+                            isXiaoshi() -> {
+                                ReminderScheduler
+                                    .scheduleXiaoshiSnooze(
+                                        context = this,
+                                        minutes = 10
+                                    )
+                            }
 
-                            ReminderScheduler
-                                .scheduleXiaoshiSnooze(
-                                    context = this,
-                                    minutes = 10
-                                )
+                            isQigong() -> {
+                                ReminderScheduler
+                                    .scheduleQigongSnooze(
+                                        context = this,
+                                        minutes = 10
+                                    )
+                            }
 
-                        } else {
-
-                            ReminderScheduler
-                                .scheduleSnooze(
-                                    context = this,
-                                    minutes = 10
-                                )
+                            else -> {
+                                ReminderScheduler
+                                    .scheduleSnooze(
+                                        context = this,
+                                        minutes = 10
+                                    )
+                            }
                         }
 
                         finish()
