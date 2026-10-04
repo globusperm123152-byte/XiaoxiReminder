@@ -61,11 +61,13 @@ class ReminderReceiver : BroadcastReceiver() {
         } catch (_: SecurityException) {
         }
 
-        ReminderScheduler.scheduleNext(
-            context,
-            requestCode,
-            hour,
-            minute
-        )
+        if (requestCode >= 0) {
+    ReminderScheduler.scheduleNext(
+        context,
+        requestCode,
+        hour,
+        minute
+    )
+}
     }
 }
