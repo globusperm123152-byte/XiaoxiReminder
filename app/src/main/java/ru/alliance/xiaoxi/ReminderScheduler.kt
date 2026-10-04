@@ -36,7 +36,11 @@ object ReminderScheduler {
         val alarmManager =
             context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
 
-        val intent = Intent(context, ReminderReceiver::class.java)
+        val intent = Intent(context, ReminderReceiver::class.java).apply {
+    putExtra("requestCode", requestCode)
+    putExtra("hour", hour)
+    putExtra("minute", minute)
+}
 
         val pendingIntent = PendingIntent.getBroadcast(
             context,
