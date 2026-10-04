@@ -1,5 +1,6 @@
 package ru.alliance.xiaoxi
 
+import android.app.NotificationManager
 import android.graphics.Color
 import android.media.AudioAttributes
 import android.media.Ringtone
@@ -24,7 +25,6 @@ class AlarmActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Показываем Сяоси поверх заблокированного экрана
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
             setShowWhenLocked(true)
             setTurnScreenOn(true)
@@ -80,6 +80,7 @@ class AlarmActivity : AppCompatActivity() {
 
             setOnClickListener {
                 stopAlarm()
+                removeNotification()
                 finish()
             }
         }
@@ -93,7 +94,6 @@ class AlarmActivity : AppCompatActivity() {
 
     private fun startAlarm() {
 
-        // Звук именно будильника, а не уведомления
         val alarmUri =
             RingtoneManager.getDefaultUri(
                 RingtoneManager.TYPE_ALARM
@@ -122,7 +122,6 @@ class AlarmActivity : AppCompatActivity() {
 
         ringtone?.play()
 
-        // Вибрация
         vibrator =
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 val manager =
@@ -152,6 +151,14 @@ class AlarmActivity : AppCompatActivity() {
     private fun stopAlarm() {
         ringtone?.stop()
         vibrator?.cancel()
+    }
+
+    private fun removeNotification() {
+        val notificationManager =
+            getSystemService(NotificationManager::class.java)
+
+        // Удаляем все активные уведомления Сяоси
+        notificationManager.cancelAll()
     }
 
     override fun onDestroy() {
