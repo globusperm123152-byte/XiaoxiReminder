@@ -33,25 +33,6 @@ object ReminderScheduler {
         hour: Int,
         minute: Int
     ) {
-        val alarmManager =
-            context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-
-        val intent = Intent(
-            context,
-            ReminderReceiver::class.java
-        ).apply {
-            putExtra("requestCode", requestCode)
-            putExtra("hour", hour)
-            putExtra("minute", minute)
-        }
-
-        val pendingIntent = PendingIntent.getBroadcast(
-            context,
-            requestCode,
-            intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or
-                    PendingIntent.FLAG_IMMUTABLE
-        )
 
         val calendar = Calendar.getInstance().apply {
 
@@ -72,39 +53,77 @@ object ReminderScheduler {
             }
         }
 
-        alarmManager.setExactAndAllowWhileIdle(
-            AlarmManager.RTC_WAKEUP,
-            calendar.timeInMillis,
-            pendingIntent
+        scheduleAlarmClock(
+            context = context,
+            requestCode = requestCode,
+            triggerTime = calendar.timeInMillis,
+            hour = hour,
+            minute = minute
         )
     }
 
     fun scheduleTest(context: Context) {
 
+        scheduleAlarmClock(
+            context = context,
+            requestCode = -1,
+            triggerTime = System.currentTimeMillis() + 2 * 60 * 1000,
+            hour = 0,
+            minute = 0
+        )
+    }
+
+    private fun scheduleAlarmClock(
+        context: Context,
+        requestCode: Int,
+        triggerTime: Long,
+        hour: Int,
+        minute: Int
+    ) {
+
         val alarmManager =
             context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
 
-        val intent = Intent(
+        val receiverIntent = Intent(
             context,
             ReminderReceiver::class.java
         ).apply {
-            putExtra("requestCode", -1)
-            putExtra("hour", 0)
-            putExtra("minute", 0)
+            putExtra("requestCode", requestCode)
+            putExtra("hour", hour)
+            putExtra("minute", minute)
         }
 
-        val pendingIntent = PendingIntent.getBroadcast(
+        val receiverPendingIntent = PendingIntent.getBroadcast(
             context,
-            999,
-            intent,
+            if (requestCode < 0) 999 else requestCode,
+            receiverIntent,
             PendingIntent.FLAG_UPDATE_CURRENT or
                     PendingIntent.FLAG_IMMUTABLE
         )
 
-        alarmManager.setExactAndAllowWhileIdle(
-            AlarmManager.RTC_WAKEUP,
-            System.currentTimeMillis() + 2 * 60 * 1000,
-            pendingIntent
+        // Если пользователь нажмёт системный значок
+        // предстоящего будильника, откроется Сяоси.
+        val showIntent = Intent(
+            context,
+            MainActivity::class.java
+        )
+
+        val showPendingIntent = PendingIntent.getActivity(
+            context,
+            5000 + if (requestCode < 0) 999 else requestCode,
+            showIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or
+                    PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val alarmInfo = AlarmManager.AlarmClockInfo(
+            triggerTime,
+            showPendingIntent
+        )
+
+        alarmManager.setAlarmClock(
+            alarmInfo,
+            receiverPendingIntent
         )
     }
 }
