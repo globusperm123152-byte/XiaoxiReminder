@@ -25,11 +25,30 @@ jobs:
         with:
           gradle-version: '8.9'
 
+      - name: Restore signing key
+        run: |
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > xiaoxi-release.jks
+
       - name: Build APK
         run: gradle assembleDebug
+
+      - name: Sign APK
+        run: |
+          ${ANDROID_HOME}/build-tools/35.0.0/apksigner sign \
+            --ks xiaoxi-release.jks \
+            --ks-key-alias "${{ secrets.KEY_ALIAS }}" \
+            --ks-pass pass:"${{ secrets.KEYSTORE_PASSWORD }}" \
+            --key-pass pass:"${{ secrets.KEYSTORE_PASSWORD }}" \
+            --out app/build/outputs/apk/debug/xiaoxi-signed.apk \
+            app/build/outputs/apk/debug/app-debug.apk
+
+      - name: Verify APK signature
+        run: |
+          ${ANDROID_HOME}/build-tools/35.0.0/apksigner verify --verbose \
+            app/build/outputs/apk/debug/xiaoxi-signed.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: Xiaoxi-APK
-          path: app/build/outputs/apk/debug/app-debug.apk
+          path: app/build/outputs/apk/debug/xiaoxi-signed.apk
