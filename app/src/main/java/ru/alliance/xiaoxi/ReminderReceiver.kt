@@ -24,18 +24,13 @@ class ReminderReceiver : BroadcastReceiver() {
         val alarmType = intent.getStringExtra("alarmType") ?: "regular"
         val stage = intent.getIntExtra("stage", 0)
 
-        val notificationId = if (requestCode < 0) {
-            999
-        } else {
-            100 + requestCode
-        }
+        val notificationId =
+            if (requestCode < 0) 999 else 100 + requestCode
 
         createChannel(context)
 
-        val activityIntent = Intent(
-            context,
-            AlarmActivity::class.java
-        )
+        val activityIntent =
+            Intent(context, AlarmActivity::class.java)
 
         activityIntent.flags =
             Intent.FLAG_ACTIVITY_NEW_TASK or
@@ -66,6 +61,7 @@ class ReminderReceiver : BroadcastReceiver() {
             )
 
         val text = when {
+
             alarmType == "exercise" && stage == 1 ->
                 "10 минут закончились"
 
@@ -74,6 +70,15 @@ class ReminderReceiver : BroadcastReceiver() {
 
             alarmType == "snooze" ->
                 "Пора сделать отложенную паузу"
+
+            alarmType == "xiaoshi" ->
+                "Время дневного сна"
+
+            alarmType == "xiaoshi_timer" ->
+                "25 минут сна закончились"
+
+            alarmType == "xiaoshi_snooze" ->
+                "Пора на отложенный дневной сон"
 
             else ->
                 "Пора сделать рабочую паузу"
@@ -118,6 +123,7 @@ class ReminderReceiver : BroadcastReceiver() {
         } catch (_: SecurityException) {
         }
 
+        // Обычная Сяоси
         if (
             alarmType == "regular" &&
             requestCode >= 0
@@ -127,6 +133,14 @@ class ReminderReceiver : BroadcastReceiver() {
                 requestCode,
                 hour,
                 minute
+            )
+        }
+
+        // Сяоши в 13:30:
+        // сразу назначаем следующую на следующий рабочий день.
+        if (alarmType == "xiaoshi") {
+            ReminderScheduler.scheduleNextXiaoshi(
+                context
             )
         }
     }
