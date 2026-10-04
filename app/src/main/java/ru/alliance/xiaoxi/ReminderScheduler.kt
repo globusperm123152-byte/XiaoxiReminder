@@ -73,4 +73,26 @@ object ReminderScheduler {
             pendingIntent
         )
     }
+fun scheduleTest(context: Context) {
+    val alarmManager =
+        context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+
+    val intent = Intent(context, ReminderReceiver::class.java).apply {
+        putExtra("requestCode", - 1)
+        putExtra("hour", 11)
+        putExtra("minute", 0)
+    }
+
+    val pendingIntent = PendingIntent.getBroadcast(
+        context,
+        99,
+        intent,
+        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+    )
+
+    alarmManager.setExactAndAllowWhileIdle(
+        AlarmManager.RTC_WAKEUP,
+        System.currentTimeMillis() + 2 * 60 * 1000,
+        pendingIntent
+    )
 }
