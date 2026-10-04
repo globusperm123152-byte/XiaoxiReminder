@@ -22,6 +22,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var enableButton: Button
     private lateinit var testButton: Button
     private lateinit var xiaoshiTestButton: Button
+    private lateinit var qigongTestButton: Button
 
     private var waitingForExactAlarmPermission = false
     private var waitingForFullScreenPermission = false
@@ -73,6 +74,12 @@ class MainActivity : AppCompatActivity() {
                 13:30
                 
                 25 минут отдыха
+                
+                ЦИГУН
+                
+                16:30
+                
+                5 минут — дыхание и плавные движения
             """.trimIndent()
 
             textSize = 19f
@@ -81,7 +88,6 @@ class MainActivity : AppCompatActivity() {
 
         enableButton = Button(this).apply {
             textSize = 17f
-
             setOnClickListener {
                 enableReminders()
             }
@@ -90,7 +96,6 @@ class MainActivity : AppCompatActivity() {
         testButton = Button(this).apply {
             text = "ТЕСТ СЯОСИ — ЧЕРЕЗ 2 МИНУТЫ"
             textSize = 15f
-
             setOnClickListener {
                 startTest()
             }
@@ -99,9 +104,16 @@ class MainActivity : AppCompatActivity() {
         xiaoshiTestButton = Button(this).apply {
             text = "ТЕСТ СЯОШИ — ЧЕРЕЗ 2 МИНУТЫ"
             textSize = 15f
-
             setOnClickListener {
                 startXiaoshiTest()
+            }
+        }
+
+        qigongTestButton = Button(this).apply {
+            text = "ТЕСТ ЦИГУН — ЧЕРЕЗ 2 МИНУТЫ"
+            textSize = 15f
+            setOnClickListener {
+                startQigongTest()
             }
         }
 
@@ -110,6 +122,7 @@ class MainActivity : AppCompatActivity() {
         layout.addView(enableButton)
         layout.addView(testButton)
         layout.addView(xiaoshiTestButton)
+        layout.addView(qigongTestButton)
 
         setContentView(layout)
     }
@@ -126,15 +139,10 @@ class MainActivity : AppCompatActivity() {
             )
 
         if (enabled) {
-            enableButton.text =
-                "НАПОМИНАНИЯ ВКЛЮЧЕНЫ ✓"
-
+            enableButton.text = "НАПОМИНАНИЯ ВКЛЮЧЕНЫ ✓"
             enableButton.isEnabled = false
-
         } else {
-            enableButton.text =
-                "ВКЛЮЧИТЬ НАПОМИНАНИЯ"
-
+            enableButton.text = "ВКЛЮЧИТЬ НАПОМИНАНИЯ"
             enableButton.isEnabled = true
         }
     }
@@ -174,20 +182,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun startTest() {
 
-        if (!hasNotificationPermission()) {
-            requestNotificationPermission()
-            return
-        }
-
-        if (!hasExactAlarmPermission()) {
-            requestExactAlarmPermission()
-            return
-        }
-
-        if (!hasFullScreenPermission()) {
-            requestFullScreenPermission()
-            return
-        }
+        if (!permissionsReady()) return
 
         ReminderScheduler.scheduleTest(this)
 
@@ -197,35 +192,47 @@ class MainActivity : AppCompatActivity() {
 
     private fun startXiaoshiTest() {
 
+        if (!permissionsReady()) return
+
+        ReminderScheduler.scheduleXiaoshiTest(this)
+
+        xiaoshiTestButton.text = "ТЕСТ СЯОШИ ЗАПУЩЕН ✓"
+        xiaoshiTestButton.isEnabled = false
+    }
+
+    private fun startQigongTest() {
+
+        if (!permissionsReady()) return
+
+        ReminderScheduler.scheduleQigongTest(this)
+
+        qigongTestButton.text = "ТЕСТ ЦИГУН ЗАПУЩЕН ✓"
+        qigongTestButton.isEnabled = false
+    }
+
+    private fun permissionsReady(): Boolean {
+
         if (!hasNotificationPermission()) {
             requestNotificationPermission()
-            return
+            return false
         }
 
         if (!hasExactAlarmPermission()) {
             requestExactAlarmPermission()
-            return
+            return false
         }
 
         if (!hasFullScreenPermission()) {
             requestFullScreenPermission()
-            return
+            return false
         }
 
-        ReminderScheduler.scheduleXiaoshiTest(this)
-
-        xiaoshiTestButton.text =
-            "ТЕСТ СЯОШИ ЗАПУЩЕН ✓"
-
-        xiaoshiTestButton.isEnabled = false
+        return true
     }
 
     private fun hasNotificationPermission(): Boolean {
 
-        if (
-            Build.VERSION.SDK_INT <
-            Build.VERSION_CODES.TIRAMISU
-        ) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
             return true
         }
 
@@ -237,15 +244,10 @@ class MainActivity : AppCompatActivity() {
 
     private fun requestNotificationPermission() {
 
-        if (
-            Build.VERSION.SDK_INT >=
-            Build.VERSION_CODES.TIRAMISU
-        ) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             ActivityCompat.requestPermissions(
                 this,
-                arrayOf(
-                    Manifest.permission.POST_NOTIFICATIONS
-                ),
+                arrayOf(Manifest.permission.POST_NOTIFICATIONS),
                 NOTIFICATION_PERMISSION_REQUEST
             )
         }
@@ -253,10 +255,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun hasExactAlarmPermission(): Boolean {
 
-        if (
-            Build.VERSION.SDK_INT <
-            Build.VERSION_CODES.S
-        ) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
             return true
         }
 
@@ -267,18 +266,14 @@ class MainActivity : AppCompatActivity() {
 
     private fun requestExactAlarmPermission() {
 
-        if (
-            Build.VERSION.SDK_INT >=
-            Build.VERSION_CODES.S
-        ) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+
             waitingForExactAlarmPermission = true
 
             startActivity(
                 Intent(
                     Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM,
-                    Uri.parse(
-                        "package:$packageName"
-                    )
+                    Uri.parse("package:$packageName")
                 )
             )
         }
@@ -286,10 +281,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun hasFullScreenPermission(): Boolean {
 
-        if (
-            Build.VERSION.SDK_INT <
-            Build.VERSION_CODES.UPSIDE_DOWN_CAKE
-        ) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
             return true
         }
 
@@ -300,18 +292,14 @@ class MainActivity : AppCompatActivity() {
 
     private fun requestFullScreenPermission() {
 
-        if (
-            Build.VERSION.SDK_INT >=
-            Build.VERSION_CODES.UPSIDE_DOWN_CAKE
-        ) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+
             waitingForFullScreenPermission = true
 
             startActivity(
                 Intent(
                     Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT,
-                    Uri.parse(
-                        "package:$packageName"
-                    )
+                    Uri.parse("package:$packageName")
                 )
             )
         }
@@ -329,11 +317,9 @@ class MainActivity : AppCompatActivity() {
         )
 
         if (
-            requestCode ==
-            NOTIFICATION_PERMISSION_REQUEST &&
+            requestCode == NOTIFICATION_PERMISSION_REQUEST &&
             grantResults.isNotEmpty() &&
-            grantResults[0] ==
-            PackageManager.PERMISSION_GRANTED
+            grantResults[0] == PackageManager.PERMISSION_GRANTED
         ) {
             enableReminders()
         }
