@@ -2,6 +2,7 @@ package ru.alliance.xiaoxi
 
 import android.Manifest
 import android.app.AlarmManager
+import android.app.NotificationManager
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Color
@@ -22,6 +23,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var testButton: Button
 
     private var waitingForExactAlarmPermission = false
+    private var waitingForFullScreenPermission = false
 
     companion object {
         private const val NOTIFICATION_PERMISSION_REQUEST = 100
@@ -73,18 +75,17 @@ class MainActivity : AppCompatActivity() {
 
         enableButton = Button(this).apply {
             textSize = 17f
-
             setOnClickListener {
                 enableReminders()
             }
         }
 
         testButton = Button(this).apply {
-            text = "ТЕСТ — УВЕДОМЛЕНИЕ ЧЕРЕЗ 2 МИНУТЫ"
+            text = "ТЕСТ — СИГНАЛ ЧЕРЕЗ 2 МИНУТЫ"
             textSize = 15f
 
             setOnClickListener {
-                runTestReminder()
+                startTest()
             }
         }
 
@@ -124,17 +125,14 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
-        startReminders()
-    }
-
-    private fun startReminders() {
+        if (!hasFullScreenPermission()) {
+            requestFullScreenPermission()
+            return
+        }
 
         ReminderScheduler.scheduleAll(this)
 
-        getSharedPreferences(
-            PREFS_NAME,
-            MODE_PRIVATE
-        )
+        getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
             .edit()
             .putBoolean(KEY_REMINDERS_ENABLED, true)
             .apply()
@@ -142,7 +140,7 @@ class MainActivity : AppCompatActivity() {
         updateInterface()
     }
 
-    private fun runTestReminder() {
+    private fun startTest() {
 
         if (!hasNotificationPermission()) {
             requestNotificationPermission()
@@ -151,6 +149,11 @@ class MainActivity : AppCompatActivity() {
 
         if (!hasExactAlarmPermission()) {
             requestExactAlarmPermission()
+            return
+        }
+
+        if (!hasFullScreenPermission()) {
+            requestFullScreenPermission()
             return
         }
 
@@ -189,9 +192,8 @@ class MainActivity : AppCompatActivity() {
             return true
         }
 
-        val alarmManager = getSystemService(AlarmManager::class.java)
-
-        return alarmManager.canScheduleExactAlarms()
+        return getSystemService(AlarmManager::class.java)
+            .canScheduleExactAlarms()
     }
 
     private fun requestExactAlarmPermission() {
@@ -200,12 +202,37 @@ class MainActivity : AppCompatActivity() {
 
             waitingForExactAlarmPermission = true
 
-            val intent = Intent(
-                Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM,
-                Uri.parse("package:$packageName")
+            startActivity(
+                Intent(
+                    Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM,
+                    Uri.parse("package:$packageName")
+                )
             )
+        }
+    }
 
-            startActivity(intent)
+    private fun hasFullScreenPermission(): Boolean {
+
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            return true
+        }
+
+        return getSystemService(NotificationManager::class.java)
+            .canUseFullScreenIntent()
+    }
+
+    private fun requestFullScreenPermission() {
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+
+            waitingForFullScreenPermission = true
+
+            startActivity(
+                Intent(
+                    Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT,
+                    Uri.parse("package:$packageName")
+                )
+            )
         }
     }
 
@@ -239,7 +266,16 @@ class MainActivity : AppCompatActivity() {
             hasExactAlarmPermission()
         ) {
             waitingForExactAlarmPermission = false
-            startReminders()
+            enableReminders()
+            return
+        }
+
+        if (
+            waitingForFullScreenPermission &&
+            hasFullScreenPermission()
+        ) {
+            waitingForFullScreenPermission = false
+            enableReminders()
         }
     }
 }
