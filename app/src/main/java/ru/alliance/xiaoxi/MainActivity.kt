@@ -21,6 +21,7 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var enableButton: Button
     private lateinit var testButton: Button
+    private lateinit var xiaoshiTestButton: Button
 
     private var waitingForExactAlarmPermission = false
     private var waitingForFullScreenPermission = false
@@ -33,7 +34,6 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
         createInterface()
         updateInterface()
     }
@@ -42,7 +42,7 @@ class MainActivity : AppCompatActivity() {
 
         val layout = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(60, 80, 60, 60)
+            setPadding(60, 60, 60, 60)
         }
 
         val title = TextView(this).apply {
@@ -55,7 +55,7 @@ class MainActivity : AppCompatActivity() {
         val info = TextView(this).apply {
             text = """
                 
-                Рабочие паузы
+                РАБОЧИЕ ПАУЗЫ — СЯОСИ
                 
                 Понедельник — пятница
                 
@@ -67,21 +67,28 @@ class MainActivity : AppCompatActivity() {
                 
                 10 минут — закрыть глаза
                 5 минут — спокойно походить
+                
+                СЯОШИ — ДНЕВНОЙ СОН
+                
+                13:30
+                
+                25 минут отдыха
             """.trimIndent()
 
-            textSize = 20f
+            textSize = 19f
             setTextColor(Color.DKGRAY)
         }
 
         enableButton = Button(this).apply {
             textSize = 17f
+
             setOnClickListener {
                 enableReminders()
             }
         }
 
         testButton = Button(this).apply {
-            text = "ТЕСТ — СИГНАЛ ЧЕРЕЗ 2 МИНУТЫ"
+            text = "ТЕСТ СЯОСИ — ЧЕРЕЗ 2 МИНУТЫ"
             textSize = 15f
 
             setOnClickListener {
@@ -89,26 +96,45 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
+        xiaoshiTestButton = Button(this).apply {
+            text = "ТЕСТ СЯОШИ — ЧЕРЕЗ 2 МИНУТЫ"
+            textSize = 15f
+
+            setOnClickListener {
+                startXiaoshiTest()
+            }
+        }
+
         layout.addView(title)
         layout.addView(info)
         layout.addView(enableButton)
         layout.addView(testButton)
+        layout.addView(xiaoshiTestButton)
 
         setContentView(layout)
     }
 
     private fun updateInterface() {
 
-        val enabled = getSharedPreferences(
-            PREFS_NAME,
-            MODE_PRIVATE
-        ).getBoolean(KEY_REMINDERS_ENABLED, false)
+        val enabled =
+            getSharedPreferences(
+                PREFS_NAME,
+                MODE_PRIVATE
+            ).getBoolean(
+                KEY_REMINDERS_ENABLED,
+                false
+            )
 
         if (enabled) {
-            enableButton.text = "НАПОМИНАНИЯ ВКЛЮЧЕНЫ ✓"
+            enableButton.text =
+                "НАПОМИНАНИЯ ВКЛЮЧЕНЫ ✓"
+
             enableButton.isEnabled = false
+
         } else {
-            enableButton.text = "ВКЛЮЧИТЬ НАПОМИНАНИЯ"
+            enableButton.text =
+                "ВКЛЮЧИТЬ НАПОМИНАНИЯ"
+
             enableButton.isEnabled = true
         }
     }
@@ -132,9 +158,15 @@ class MainActivity : AppCompatActivity() {
 
         ReminderScheduler.scheduleAll(this)
 
-        getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+        getSharedPreferences(
+            PREFS_NAME,
+            MODE_PRIVATE
+        )
             .edit()
-            .putBoolean(KEY_REMINDERS_ENABLED, true)
+            .putBoolean(
+                KEY_REMINDERS_ENABLED,
+                true
+            )
             .apply()
 
         updateInterface()
@@ -159,13 +191,41 @@ class MainActivity : AppCompatActivity() {
 
         ReminderScheduler.scheduleTest(this)
 
-        testButton.text = "ТЕСТ ЗАПУЩЕН ✓"
+        testButton.text = "ТЕСТ СЯОСИ ЗАПУЩЕН ✓"
         testButton.isEnabled = false
+    }
+
+    private fun startXiaoshiTest() {
+
+        if (!hasNotificationPermission()) {
+            requestNotificationPermission()
+            return
+        }
+
+        if (!hasExactAlarmPermission()) {
+            requestExactAlarmPermission()
+            return
+        }
+
+        if (!hasFullScreenPermission()) {
+            requestFullScreenPermission()
+            return
+        }
+
+        ReminderScheduler.scheduleXiaoshiTest(this)
+
+        xiaoshiTestButton.text =
+            "ТЕСТ СЯОШИ ЗАПУЩЕН ✓"
+
+        xiaoshiTestButton.isEnabled = false
     }
 
     private fun hasNotificationPermission(): Boolean {
 
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+        if (
+            Build.VERSION.SDK_INT <
+            Build.VERSION_CODES.TIRAMISU
+        ) {
             return true
         }
 
@@ -177,10 +237,15 @@ class MainActivity : AppCompatActivity() {
 
     private fun requestNotificationPermission() {
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        if (
+            Build.VERSION.SDK_INT >=
+            Build.VERSION_CODES.TIRAMISU
+        ) {
             ActivityCompat.requestPermissions(
                 this,
-                arrayOf(Manifest.permission.POST_NOTIFICATIONS),
+                arrayOf(
+                    Manifest.permission.POST_NOTIFICATIONS
+                ),
                 NOTIFICATION_PERMISSION_REQUEST
             )
         }
@@ -188,24 +253,32 @@ class MainActivity : AppCompatActivity() {
 
     private fun hasExactAlarmPermission(): Boolean {
 
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
+        if (
+            Build.VERSION.SDK_INT <
+            Build.VERSION_CODES.S
+        ) {
             return true
         }
 
-        return getSystemService(AlarmManager::class.java)
-            .canScheduleExactAlarms()
+        return getSystemService(
+            AlarmManager::class.java
+        ).canScheduleExactAlarms()
     }
 
     private fun requestExactAlarmPermission() {
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-
+        if (
+            Build.VERSION.SDK_INT >=
+            Build.VERSION_CODES.S
+        ) {
             waitingForExactAlarmPermission = true
 
             startActivity(
                 Intent(
                     Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM,
-                    Uri.parse("package:$packageName")
+                    Uri.parse(
+                        "package:$packageName"
+                    )
                 )
             )
         }
@@ -213,24 +286,32 @@ class MainActivity : AppCompatActivity() {
 
     private fun hasFullScreenPermission(): Boolean {
 
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+        if (
+            Build.VERSION.SDK_INT <
+            Build.VERSION_CODES.UPSIDE_DOWN_CAKE
+        ) {
             return true
         }
 
-        return getSystemService(NotificationManager::class.java)
-            .canUseFullScreenIntent()
+        return getSystemService(
+            NotificationManager::class.java
+        ).canUseFullScreenIntent()
     }
 
     private fun requestFullScreenPermission() {
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-
+        if (
+            Build.VERSION.SDK_INT >=
+            Build.VERSION_CODES.UPSIDE_DOWN_CAKE
+        ) {
             waitingForFullScreenPermission = true
 
             startActivity(
                 Intent(
                     Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT,
-                    Uri.parse("package:$packageName")
+                    Uri.parse(
+                        "package:$packageName"
+                    )
                 )
             )
         }
@@ -248,9 +329,11 @@ class MainActivity : AppCompatActivity() {
         )
 
         if (
-            requestCode == NOTIFICATION_PERMISSION_REQUEST &&
+            requestCode ==
+            NOTIFICATION_PERMISSION_REQUEST &&
             grantResults.isNotEmpty() &&
-            grantResults[0] == PackageManager.PERMISSION_GRANTED
+            grantResults[0] ==
+            PackageManager.PERMISSION_GRANTED
         ) {
             enableReminders()
         }
