@@ -14,6 +14,10 @@ class ReminderReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
 
+        val requestCode = intent.getIntExtra("requestCode", 0)
+        val hour = intent.getIntExtra("hour", 11)
+        val minute = intent.getIntExtra("minute", 0)
+
         val channelId = "xiaoxi_reminders"
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -43,7 +47,7 @@ class ReminderReceiver : BroadcastReceiver() {
         val notification = NotificationCompat.Builder(context, channelId)
             .setSmallIcon(android.R.drawable.ic_popup_reminder)
             .setContentTitle("Сяоси")
-            .setContentText("Пора сделать паузу: 10 минут для глаз и немного пройтись.")
+            .setContentText("Пора сделать паузу: 10 минут для глаз и 5 минут спокойно походить.")
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setAutoCancel(true)
             .setContentIntent(pendingIntent)
@@ -51,11 +55,17 @@ class ReminderReceiver : BroadcastReceiver() {
 
         try {
             NotificationManagerCompat.from(context).notify(
-                System.currentTimeMillis().toInt(),
+                requestCode + 100,
                 notification
             )
         } catch (_: SecurityException) {
-            // Разрешение на уведомления ещё не выдано.
         }
+
+        ReminderScheduler.scheduleNext(
+            context,
+            requestCode,
+            hour,
+            minute
+        )
     }
 }
