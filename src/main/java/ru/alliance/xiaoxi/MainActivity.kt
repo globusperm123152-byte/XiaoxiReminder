@@ -2,54 +2,63 @@ package ru.alliance.xiaoxi
 
 import android.Manifest
 import android.app.AlarmManager
-import android.app.PendingIntent
-import android.content.Context
+import android.app.NotificationManager
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Color
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
+import android.view.Gravity
 import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
-import java.util.Calendar
 
 class MainActivity : AppCompatActivity() {
 
+    private lateinit var enableButton: Button
+    private lateinit var testButton: Button
+    private lateinit var xiaoshiTestButton: Button
+    private lateinit var qigongTestButton: Button
+
+    private var waitingForExactAlarmPermission = false
+    private var waitingForFullScreenPermission = false
+
+    companion object {
+        private const val NOTIFICATION_PERMISSION_REQUEST = 100
+        private const val PREFS_NAME = "xiaoxi"
+        private const val KEY_REMINDERS_ENABLED = "reminders_enabled"
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        createInterface()
+        updateInterface()
+    }
 
-        if (Build.VERSION.SDK_INT >= 33 &&
-            ActivityCompat.checkSelfPermission(
-                this,
-                Manifest.permission.POST_NOTIFICATIONS
-            ) != PackageManager.PERMISSION_GRANTED
-        ) {
-            ActivityCompat.requestPermissions(
-                this,
-                arrayOf(Manifest.permission.POST_NOTIFICATIONS),
-                100
-            )
-        }
+    private fun createInterface() {
 
         val layout = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(60, 100, 60, 60)
+            setPadding(60, 60, 60, 60)
         }
 
         val title = TextView(this).apply {
             text = "Сяоси"
             textSize = 34f
+            setTextColor(Color.BLACK)
+            gravity = Gravity.CENTER_HORIZONTAL
         }
 
         val info = TextView(this).apply {
             text = """
                 
-                Рабочие паузы
+                РАБОЧИЕ ПАУЗЫ — СЯОСИ
                 
-                Пн–Пт
+                Понедельник — пятница
                 
                 11:00
                 12:30
@@ -59,92 +68,322 @@ class MainActivity : AppCompatActivity() {
                 
                 10 минут — закрыть глаза
                 5 минут — спокойно походить
+                
+                СЯОШИ — ДНЕВНОЙ СОН
+                
+                13:30
+                
+                25 минут отдыха
+                
+                ЦИГУН
+                
+                16:30
+                
+                5 минут — дыхание и плавные движения
             """.trimIndent()
+
             textSize = 19f
+            setTextColor(Color.DKGRAY)
         }
 
-        val button = Button(this).apply {
-            text = "ВКЛЮЧИТЬ НАПОМИНАНИЯ"
+        enableButton = Button(this).apply {
+            textSize = 17f
+
             setOnClickListener {
-                enableExactAlarmsIfNeeded()
-ReminderScheduler.scheduleAll(this@MainActivity)
-                text = "НАПОМИНАНИЯ ВКЛЮЧЕНЫ ✓"
+                enableReminders()
+            }
+        }
+
+        testButton = Button(this).apply {
+            text = "ТЕСТ СЯОСИ — ЧЕРЕЗ 2 МИНУТЫ"
+            textSize = 15f
+
+            setOnClickListener {
+                startTest()
+            }
+        }
+
+        xiaoshiTestButton = Button(this).apply {
+            text = "ТЕСТ СЯОШИ — ЧЕРЕЗ 2 МИНУТЫ"
+            textSize = 15f
+
+            setOnClickListener {
+                startXiaoshiTest()
+            }
+        }
+
+        qigongTestButton = Button(this).apply {
+            text = "ТЕСТ ЦИГУН — ЧЕРЕЗ 2 МИНУТЫ"
+            textSize = 15f
+
+            setOnClickListener {
+                startQigongTest()
             }
         }
 
         layout.addView(title)
         layout.addView(info)
-        layout.addView(button)
+        layout.addView(enableButton)
+        layout.addView(testButton)
+        layout.addView(xiaoshiTestButton)
+        layout.addView(qigongTestButton)
 
         setContentView(layout)
     }
 
-    private fun enableExactAlarmsIfNeeded() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            val alarmManager = getSystemService(AlarmManager::class.java)
+    private fun updateInterface() {
 
-            if (!alarmManager.canScheduleExactAlarms()) {
-                startActivity(
-                    Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM)
-                )
-            }
+        val enabled =
+            getSharedPreferences(
+                PREFS_NAME,
+                MODE_PRIVATE
+            ).getBoolean(
+                KEY_REMINDERS_ENABLED,
+                false
+            )
+
+        if (enabled) {
+            enableButton.text =
+                "НАПОМИНАНИЯ ВКЛЮЧЕНЫ ✓"
+
+            enableButton.isEnabled = false
+
+        } else {
+            enableButton.text =
+                "ВКЛЮЧИТЬ НАПОМИНАНИЯ"
+
+            enableButton.isEnabled = true
         }
     }
 
-    private fun scheduleReminders() {
-        val times = listOf(
-            11 to 0,
-            12 to 30,
-            14 to 0,
-            15 to 30,
-            17 to 0
+    private fun enableReminders() {
+
+        if (!hasNotificationPermission()) {
+            requestNotificationPermission()
+            return
+        }
+
+        if (!hasExactAlarmPermission()) {
+            requestExactAlarmPermission()
+            return
+        }
+
+        if (!hasFullScreenPermission()) {
+            requestFullScreenPermission()
+            return
+        }
+
+        ReminderScheduler.scheduleAll(this)
+
+        getSharedPreferences(
+            PREFS_NAME,
+            MODE_PRIVATE
         )
+            .edit()
+            .putBoolean(
+                KEY_REMINDERS_ENABLED,
+                true
+            )
+            .apply()
 
-        times.forEachIndexed { index, time ->
-            scheduleNext(index, time.first, time.second)
-        }
+        updateInterface()
     }
 
-    private fun scheduleNext(
-        requestCode: Int,
-        hour: Int,
-        minute: Int
-    ) {
-        val alarmManager =
-            getSystemService(Context.ALARM_SERVICE) as AlarmManager
+    private fun startTest() {
 
-        val intent = Intent(this, ReminderReceiver::class.java).apply {
-            putExtra("requestCode", requestCode)
-            putExtra("hour", hour)
-            putExtra("minute", minute)
+        if (!permissionsReady()) {
+            return
         }
 
-        val pendingIntent = PendingIntent.getBroadcast(
+        ReminderScheduler.scheduleTest(this)
+
+        testButton.text = "ТЕСТ СЯОСИ ЗАПУЩЕН ✓"
+        testButton.isEnabled = false
+    }
+
+    private fun startXiaoshiTest() {
+
+        if (!permissionsReady()) {
+            return
+        }
+
+        ReminderScheduler.scheduleXiaoshiTest(this)
+
+        xiaoshiTestButton.text =
+            "ТЕСТ СЯОШИ ЗАПУЩЕН ✓"
+
+        xiaoshiTestButton.isEnabled = false
+    }
+
+    private fun startQigongTest() {
+
+        if (!permissionsReady()) {
+            return
+        }
+
+        ReminderScheduler.scheduleQigongTest(this)
+
+        qigongTestButton.text =
+            "ТЕСТ ЦИГУН ЗАПУЩЕН ✓"
+
+        qigongTestButton.isEnabled = false
+    }
+
+    private fun permissionsReady(): Boolean {
+
+        if (!hasNotificationPermission()) {
+            requestNotificationPermission()
+            return false
+        }
+
+        if (!hasExactAlarmPermission()) {
+            requestExactAlarmPermission()
+            return false
+        }
+
+        if (!hasFullScreenPermission()) {
+            requestFullScreenPermission()
+            return false
+        }
+
+        return true
+    }
+
+    private fun hasNotificationPermission(): Boolean {
+
+        if (
+            Build.VERSION.SDK_INT <
+            Build.VERSION_CODES.TIRAMISU
+        ) {
+            return true
+        }
+
+        return ActivityCompat.checkSelfPermission(
             this,
-            requestCode,
-            intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
+            Manifest.permission.POST_NOTIFICATIONS
+        ) == PackageManager.PERMISSION_GRANTED
+    }
 
-        val calendar = Calendar.getInstance().apply {
-            set(Calendar.HOUR_OF_DAY, hour)
-            set(Calendar.MINUTE, minute)
-            set(Calendar.SECOND, 0)
-            set(Calendar.MILLISECOND, 0)
+    private fun requestNotificationPermission() {
 
-            while (
-                timeInMillis <= System.currentTimeMillis() ||
-                get(Calendar.DAY_OF_WEEK) == Calendar.SATURDAY ||
-                get(Calendar.DAY_OF_WEEK) == Calendar.SUNDAY
-            ) {
-                add(Calendar.DAY_OF_YEAR, 1)
-            }
+        if (
+            Build.VERSION.SDK_INT >=
+            Build.VERSION_CODES.TIRAMISU
+        ) {
+            ActivityCompat.requestPermissions(
+                this,
+                arrayOf(
+                    Manifest.permission.POST_NOTIFICATIONS
+                ),
+                NOTIFICATION_PERMISSION_REQUEST
+            )
+        }
+    }
+
+    private fun hasExactAlarmPermission(): Boolean {
+
+        if (
+            Build.VERSION.SDK_INT <
+            Build.VERSION_CODES.S
+        ) {
+            return true
         }
 
-        alarmManager.setExactAndAllowWhileIdle(
-            AlarmManager.RTC_WAKEUP,
-            calendar.timeInMillis,
-            pendingIntent
+        return getSystemService(
+            AlarmManager::class.java
+        ).canScheduleExactAlarms()
+    }
+
+    private fun requestExactAlarmPermission() {
+
+        if (
+            Build.VERSION.SDK_INT >=
+            Build.VERSION_CODES.S
+        ) {
+            waitingForExactAlarmPermission = true
+
+            startActivity(
+                Intent(
+                    Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM,
+                    Uri.parse("package:$packageName")
+                )
+            )
+        }
+    }
+
+    private fun hasFullScreenPermission(): Boolean {
+
+        if (
+            Build.VERSION.SDK_INT <
+            Build.VERSION_CODES.UPSIDE_DOWN_CAKE
+        ) {
+            return true
+        }
+
+        return getSystemService(
+            NotificationManager::class.java
+        ).canUseFullScreenIntent()
+    }
+
+    private fun requestFullScreenPermission() {
+
+        if (
+            Build.VERSION.SDK_INT >=
+            Build.VERSION_CODES.UPSIDE_DOWN_CAKE
+        ) {
+            waitingForFullScreenPermission = true
+
+            startActivity(
+                Intent(
+                    Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT,
+                    Uri.parse("package:$packageName")
+                )
+            )
+        }
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(
+            requestCode,
+            permissions,
+            grantResults
         )
+
+        if (
+            requestCode ==
+            NOTIFICATION_PERMISSION_REQUEST &&
+            grantResults.isNotEmpty() &&
+            grantResults[0] ==
+            PackageManager.PERMISSION_GRANTED
+        ) {
+            enableReminders()
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+
+        updateInterface()
+
+        if (
+            waitingForExactAlarmPermission &&
+            hasExactAlarmPermission()
+        ) {
+            waitingForExactAlarmPermission = false
+            enableReminders()
+            return
+        }
+
+        if (
+            waitingForFullScreenPermission &&
+            hasFullScreenPermission()
+        ) {
+            waitingForFullScreenPermission = false
+            enableReminders()
+        }
     }
 }
