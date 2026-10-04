@@ -24,11 +24,20 @@ class AlarmActivity : AppCompatActivity() {
     private var vibrator: Vibrator? = null
     private var notificationId: Int = -1
 
+    private var alarmType: String = "regular"
+    private var stage: Int = 0
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         notificationId =
             intent.getIntExtra("notificationId", -1)
+
+        alarmType =
+            intent.getStringExtra("alarmType") ?: "regular"
+
+        stage =
+            intent.getIntExtra("stage", 0)
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
             setShowWhenLocked(true)
@@ -66,33 +75,142 @@ class AlarmActivity : AppCompatActivity() {
         }
 
         val message = TextView(this).apply {
-            text = """
+            text = getMessage()
+            textSize = 24f
+            setTextColor(Color.DKGRAY)
+            gravity = Gravity.CENTER
+        }
+
+        val mainButton = Button(this).apply {
+            text = getMainButtonText()
+            textSize = 20f
+
+            setOnClickListener {
+                handleMainButton()
+            }
+        }
+
+        layout.addView(title)
+        layout.addView(message)
+        layout.addView(mainButton)
+
+        // Кнопка "Отложить / пропустить"
+        // нужна только при первоначальном напоминании
+        // и при отложенном напоминании.
+        if (
+            alarmType == "regular" ||
+            alarmType == "snooze"
+        ) {
+
+            val postponeButton = Button(this).apply {
+                text = "ОТЛОЖИТЬ / ПРОПУСТИТЬ"
+                textSize = 17f
+
+                setOnClickListener {
+                    showPostponeDialog()
+                }
+            }
+
+            layout.addView(postponeButton)
+        }
+
+        setContentView(layout)
+    }
+
+    private fun getMessage(): String {
+
+        return when {
+
+            alarmType == "exercise" && stage == 1 -> """
+                
+                Первый этап завершён ✓
+                
+                Теперь встань и спокойно походи
+                
+                5 минут
+                
+                Без телефона и без работы
+            """.trimIndent()
+
+            alarmType == "exercise" && stage == 2 -> """
+                
+                Сяоси завершена ✓
+                
+                10 минут — глаза закрыты
+                5 минут — спокойная ходьба
+                
+                Можно возвращаться к работе
+            """.trimIndent()
+
+            alarmType == "snooze" -> """
+                
+                Напоминание было отложено
                 
                 Пора сделать паузу
                 
-                Первый этап
+                10 минут — закрыть глаза
+                затем
+                5 минут — спокойно походить
+            """.trimIndent()
+
+            else -> """
+                
+                Пора сделать паузу
                 
                 10 минут — закрыть глаза
                 
                 Затем:
                 5 минут — спокойно походить
             """.trimIndent()
-
-            textSize = 24f
-            setTextColor(Color.DKGRAY)
-            gravity = Gravity.CENTER
         }
+    }
 
-        val startButton = Button(this).apply {
-            text = "НАЧАТЬ"
-            textSize = 20f
+    private fun getMainButtonText(): String {
 
-            setOnClickListener {
-                stopAlarm()
-                removeNotification()
+        return when {
+
+            alarmType == "exercise" && stage == 1 ->
+                "НАЧАТЬ 5 МИНУТ ХОДЬБЫ"
+
+            alarmType == "exercise" && stage == 2 ->
+                "ГОТОВО"
+
+            else ->
+                "НАЧАТЬ"
+        }
+    }
+
+    private fun handleMainButton() {
+
+        stopAlarm()
+        removeNotification()
+
+        when {
+
+            // Закончилось 10 минут с закрытыми глазами.
+            // Запускаем второй этап на 5 минут.
+            alarmType == "exercise" && stage == 1 -> {
 
                 ReminderScheduler.scheduleExerciseTimer(
-                    context = this@AlarmActivity,
+                    context = this,
+                    minutes = 5,
+                    stage = 2
+                )
+
+                finish()
+            }
+
+            // Второй этап закончился.
+            alarmType == "exercise" && stage == 2 -> {
+                finish()
+            }
+
+            // Первоначальная или отложенная Сяоси.
+            // Запускаем первые 10 минут.
+            else -> {
+
+                ReminderScheduler.scheduleExerciseTimer(
+                    context = this,
                     minutes = 10,
                     stage = 1
                 )
@@ -100,22 +218,6 @@ class AlarmActivity : AppCompatActivity() {
                 finish()
             }
         }
-
-        val postponeButton = Button(this).apply {
-            text = "ОТЛОЖИТЬ / ПРОПУСТИТЬ"
-            textSize = 17f
-
-            setOnClickListener {
-                showPostponeDialog()
-            }
-        }
-
-        layout.addView(title)
-        layout.addView(message)
-        layout.addView(startButton)
-        layout.addView(postponeButton)
-
-        setContentView(layout)
     }
 
     private fun showPostponeDialog() {
@@ -152,7 +254,10 @@ class AlarmActivity : AppCompatActivity() {
 
                 dialog.dismiss()
             }
-            .setNegativeButton("Отмена", null)
+            .setNegativeButton(
+                "Отмена",
+                null
+            )
             .show()
     }
 
@@ -165,10 +270,11 @@ class AlarmActivity : AppCompatActivity() {
                 RingtoneManager.TYPE_NOTIFICATION
             )
 
-        ringtone = RingtoneManager.getRingtone(
-            applicationContext,
-            alarmUri
-        )
+        ringtone =
+            RingtoneManager.getRingtone(
+                applicationContext,
+                alarmUri
+            )
 
         ringtone?.audioAttributes =
             AudioAttributes.Builder()
@@ -198,7 +304,13 @@ class AlarmActivity : AppCompatActivity() {
             }
 
         val pattern =
-            longArrayOf(0, 700, 400, 700, 400)
+            longArrayOf(
+                0,
+                700,
+                400,
+                700,
+                400
+            )
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
 
@@ -212,7 +324,10 @@ class AlarmActivity : AppCompatActivity() {
         } else {
 
             @Suppress("DEPRECATION")
-            vibrator?.vibrate(pattern, 0)
+            vibrator?.vibrate(
+                pattern,
+                0
+            )
         }
     }
 
@@ -224,6 +339,7 @@ class AlarmActivity : AppCompatActivity() {
     private fun removeNotification() {
 
         if (notificationId >= 0) {
+
             getSystemService(
                 NotificationManager::class.java
             ).cancel(notificationId)
