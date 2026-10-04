@@ -46,7 +46,7 @@ class AlarmActivity : AppCompatActivity() {
             @Suppress("DEPRECATION")
             window.addFlags(
                 WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
-                        WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON
+                    WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON
             )
         }
 
@@ -68,7 +68,8 @@ class AlarmActivity : AppCompatActivity() {
         }
 
         val title = TextView(this).apply {
-            text = "Сяоси"
+            text =
+                if (isXiaoshi()) "Сяоши" else "Сяоси"
             textSize = 42f
             setTextColor(Color.BLACK)
             gravity = Gravity.CENTER
@@ -94,12 +95,11 @@ class AlarmActivity : AppCompatActivity() {
         layout.addView(message)
         layout.addView(mainButton)
 
-        // Кнопка "Отложить / пропустить"
-        // нужна только при первоначальном напоминании
-        // и при отложенном напоминании.
         if (
             alarmType == "regular" ||
-            alarmType == "snooze"
+            alarmType == "snooze" ||
+            alarmType == "xiaoshi" ||
+            alarmType == "xiaoshi_snooze"
         ) {
 
             val postponeButton = Button(this).apply {
@@ -117,9 +117,48 @@ class AlarmActivity : AppCompatActivity() {
         setContentView(layout)
     }
 
+    private fun isXiaoshi(): Boolean {
+
+        return (
+            alarmType == "xiaoshi" ||
+            alarmType == "xiaoshi_timer" ||
+            alarmType == "xiaoshi_snooze"
+        )
+    }
+
     private fun getMessage(): String {
 
         return when {
+
+            alarmType == "xiaoshi_timer" -> """
+                
+                Сяоши завершена ✓
+                
+                25 минут отдыха закончились
+                
+                Можно спокойно возвращаться
+                к работе
+            """.trimIndent()
+
+            alarmType == "xiaoshi_snooze" -> """
+                
+                Отложенная Сяоши
+                
+                Пора сделать дневной отдых
+                
+                25 минут
+            """.trimIndent()
+
+            alarmType == "xiaoshi" -> """
+                
+                Время Сяоши
+                
+                Дневной сон
+                
+                25 минут
+                
+                Убери телефон и закрой глаза
+            """.trimIndent()
 
             alarmType == "exercise" && stage == 1 -> """
                 
@@ -169,6 +208,9 @@ class AlarmActivity : AppCompatActivity() {
 
         return when {
 
+            alarmType == "xiaoshi_timer" ->
+                "ГОТОВО"
+
             alarmType == "exercise" && stage == 1 ->
                 "НАЧАТЬ 5 МИНУТ ХОДЬБЫ"
 
@@ -187,8 +229,21 @@ class AlarmActivity : AppCompatActivity() {
 
         when {
 
-            // Закончилось 10 минут с закрытыми глазами.
-            // Запускаем второй этап на 5 минут.
+            alarmType == "xiaoshi_timer" -> {
+                finish()
+            }
+
+            alarmType == "xiaoshi" ||
+            alarmType == "xiaoshi_snooze" -> {
+
+                ReminderScheduler.scheduleXiaoshiTimer(
+                    context = this,
+                    minutes = 25
+                )
+
+                finish()
+            }
+
             alarmType == "exercise" && stage == 1 -> {
 
                 ReminderScheduler.scheduleExerciseTimer(
@@ -200,13 +255,10 @@ class AlarmActivity : AppCompatActivity() {
                 finish()
             }
 
-            // Второй этап закончился.
             alarmType == "exercise" && stage == 2 -> {
                 finish()
             }
 
-            // Первоначальная или отложенная Сяоси.
-            // Запускаем первые 10 минут.
             else -> {
 
                 ReminderScheduler.scheduleExerciseTimer(
@@ -223,7 +275,9 @@ class AlarmActivity : AppCompatActivity() {
     private fun showPostponeDialog() {
 
         AlertDialog.Builder(this)
-            .setTitle("Сяоси")
+            .setTitle(
+                if (isXiaoshi()) "Сяоши" else "Сяоси"
+            )
             .setItems(
                 arrayOf(
                     "Отложить на 10 минут",
@@ -234,13 +288,26 @@ class AlarmActivity : AppCompatActivity() {
                 when (which) {
 
                     0 -> {
+
                         stopAlarm()
                         removeNotification()
 
-                        ReminderScheduler.scheduleSnooze(
-                            context = this,
-                            minutes = 10
-                        )
+                        if (isXiaoshi()) {
+
+                            ReminderScheduler
+                                .scheduleXiaoshiSnooze(
+                                    context = this,
+                                    minutes = 10
+                                )
+
+                        } else {
+
+                            ReminderScheduler
+                                .scheduleSnooze(
+                                    context = this,
+                                    minutes = 10
+                                )
+                        }
 
                         finish()
                     }
@@ -278,7 +345,9 @@ class AlarmActivity : AppCompatActivity() {
 
         ringtone?.audioAttributes =
             AudioAttributes.Builder()
-                .setUsage(AudioAttributes.USAGE_ALARM)
+                .setUsage(
+                    AudioAttributes.USAGE_ALARM
+                )
                 .setContentType(
                     AudioAttributes.CONTENT_TYPE_SONIFICATION
                 )
@@ -300,7 +369,9 @@ class AlarmActivity : AppCompatActivity() {
             } else {
 
                 @Suppress("DEPRECATION")
-                getSystemService(VIBRATOR_SERVICE) as Vibrator
+                getSystemService(
+                    VIBRATOR_SERVICE
+                ) as Vibrator
             }
 
         val pattern =
