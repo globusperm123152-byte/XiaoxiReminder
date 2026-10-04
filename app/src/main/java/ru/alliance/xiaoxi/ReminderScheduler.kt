@@ -8,7 +8,7 @@ import java.util.Calendar
 
 object ReminderScheduler {
 
-    private val times = listOf(
+    private val xiaoxiTimes = listOf(
         11 to 0,
         12 to 30,
         14 to 0,
@@ -17,14 +17,19 @@ object ReminderScheduler {
     )
 
     fun scheduleAll(context: Context) {
-        times.forEachIndexed { index, time ->
+
+        // Сяоси
+        xiaoxiTimes.forEachIndexed { index, time ->
             scheduleNext(
-                context = context,
-                requestCode = index,
-                hour = time.first,
-                minute = time.second
+                context,
+                index,
+                time.first,
+                time.second
             )
         }
+
+        // Сяоши — дневной сон в 13:30
+        scheduleNextXiaoshi(context)
     }
 
     fun scheduleNext(
@@ -34,7 +39,131 @@ object ReminderScheduler {
         minute: Int
     ) {
 
-        val calendar = Calendar.getInstance().apply {
+        val calendar = nextWeekdayTime(
+            hour,
+            minute
+        )
+
+        scheduleAlarmClock(
+            context,
+            requestCode,
+            calendar.timeInMillis,
+            hour,
+            minute,
+            "regular",
+            0
+        )
+    }
+
+    fun scheduleNextXiaoshi(context: Context) {
+
+        val calendar = nextWeekdayTime(
+            13,
+            30
+        )
+
+        scheduleAlarmClock(
+            context,
+            3001,
+            calendar.timeInMillis,
+            13,
+            30,
+            "xiaoshi",
+            0
+        )
+    }
+
+    fun scheduleTest(context: Context) {
+
+        scheduleAlarmClock(
+            context,
+            -1,
+            System.currentTimeMillis() + 2 * 60 * 1000L,
+            0,
+            0,
+            "regular",
+            0
+        )
+    }
+
+    fun scheduleExerciseTimer(
+        context: Context,
+        minutes: Int,
+        stage: Int
+    ) {
+
+        val requestCode =
+            if (stage == 1) 1001 else 1002
+
+        scheduleAlarmClock(
+            context,
+            requestCode,
+            System.currentTimeMillis() +
+                minutes * 60 * 1000L,
+            0,
+            0,
+            "exercise",
+            stage
+        )
+    }
+
+    fun scheduleSnooze(
+        context: Context,
+        minutes: Int
+    ) {
+
+        scheduleAlarmClock(
+            context,
+            2001,
+            System.currentTimeMillis() +
+                minutes * 60 * 1000L,
+            0,
+            0,
+            "snooze",
+            0
+        )
+    }
+
+    fun scheduleXiaoshiTimer(
+        context: Context,
+        minutes: Int
+    ) {
+
+        scheduleAlarmClock(
+            context,
+            3002,
+            System.currentTimeMillis() +
+                minutes * 60 * 1000L,
+            0,
+            0,
+            "xiaoshi_timer",
+            0
+        )
+    }
+
+    fun scheduleXiaoshiSnooze(
+        context: Context,
+        minutes: Int
+    ) {
+
+        scheduleAlarmClock(
+            context,
+            3003,
+            System.currentTimeMillis() +
+                minutes * 60 * 1000L,
+            0,
+            0,
+            "xiaoshi_snooze",
+            0
+        )
+    }
+
+    private fun nextWeekdayTime(
+        hour: Int,
+        minute: Int
+    ): Calendar {
+
+        return Calendar.getInstance().apply {
 
             set(Calendar.HOUR_OF_DAY, hour)
             set(Calendar.MINUTE, minute)
@@ -52,64 +181,6 @@ object ReminderScheduler {
                 add(Calendar.DAY_OF_YEAR, 1)
             }
         }
-
-        scheduleAlarmClock(
-            context = context,
-            requestCode = requestCode,
-            triggerTime = calendar.timeInMillis,
-            hour = hour,
-            minute = minute,
-            alarmType = "regular",
-            stage = 0
-        )
-    }
-
-    fun scheduleTest(context: Context) {
-
-        scheduleAlarmClock(
-            context = context,
-            requestCode = -1,
-            triggerTime = System.currentTimeMillis() + 2 * 60 * 1000,
-            hour = 0,
-            minute = 0,
-            alarmType = "regular",
-            stage = 0
-        )
-    }
-
-    fun scheduleExerciseTimer(
-        context: Context,
-        minutes: Int,
-        stage: Int
-    ) {
-
-        scheduleAlarmClock(
-            context = context,
-            requestCode = if (stage == 1) 1001 else 1002,
-            triggerTime = System.currentTimeMillis() +
-                    minutes * 60 * 1000L,
-            hour = 0,
-            minute = 0,
-            alarmType = "exercise",
-            stage = stage
-        )
-    }
-
-    fun scheduleSnooze(
-        context: Context,
-        minutes: Int
-    ) {
-
-        scheduleAlarmClock(
-            context = context,
-            requestCode = 2001,
-            triggerTime = System.currentTimeMillis() +
-                    minutes * 60 * 1000L,
-            hour = 0,
-            minute = 0,
-            alarmType = "snooze",
-            stage = 0
-        )
     }
 
     private fun scheduleAlarmClock(
@@ -123,21 +194,40 @@ object ReminderScheduler {
     ) {
 
         val alarmManager =
-            context.getSystemService(Context.ALARM_SERVICE)
-                    as AlarmManager
+            context.getSystemService(
+                Context.ALARM_SERVICE
+            ) as AlarmManager
 
-        val receiverIntent = Intent(
-            context,
-            ReminderReceiver::class.java
-        ).apply {
+        val receiverIntent =
+            Intent(
+                context,
+                ReminderReceiver::class.java
+            )
 
-            putExtra("requestCode", requestCode)
-            putExtra("hour", hour)
-            putExtra("minute", minute)
+        receiverIntent.putExtra(
+            "requestCode",
+            requestCode
+        )
 
-            putExtra("alarmType", alarmType)
-            putExtra("stage", stage)
-        }
+        receiverIntent.putExtra(
+            "hour",
+            hour
+        )
+
+        receiverIntent.putExtra(
+            "minute",
+            minute
+        )
+
+        receiverIntent.putExtra(
+            "alarmType",
+            alarmType
+        )
+
+        receiverIntent.putExtra(
+            "stage",
+            stage
+        )
 
         val receiverPendingIntent =
             PendingIntent.getBroadcast(
@@ -145,13 +235,14 @@ object ReminderScheduler {
                 requestCode,
                 receiverIntent,
                 PendingIntent.FLAG_UPDATE_CURRENT or
-                        PendingIntent.FLAG_IMMUTABLE
+                    PendingIntent.FLAG_IMMUTABLE
             )
 
-        val showIntent = Intent(
-            context,
-            MainActivity::class.java
-        )
+        val showIntent =
+            Intent(
+                context,
+                MainActivity::class.java
+            )
 
         val showPendingIntent =
             PendingIntent.getActivity(
@@ -159,7 +250,7 @@ object ReminderScheduler {
                 5000 + requestCode,
                 showIntent,
                 PendingIntent.FLAG_UPDATE_CURRENT or
-                        PendingIntent.FLAG_IMMUTABLE
+                    PendingIntent.FLAG_IMMUTABLE
             )
 
         val alarmInfo =
