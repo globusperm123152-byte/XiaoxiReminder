@@ -15,7 +15,7 @@ import androidx.core.app.NotificationManagerCompat
 class ReminderReceiver : BroadcastReceiver() {
 
     companion object {
-        private const val CHANNEL_ID = "xiaoxi_fullscreen_alarm_v1"
+        private const val CHANNEL_ID = "xiaoxi_fullscreen_alarm_v2"
     }
 
     override fun onReceive(context: Context, intent: Intent) {
@@ -24,20 +24,24 @@ class ReminderReceiver : BroadcastReceiver() {
         val hour = intent.getIntExtra("hour", 0)
         val minute = intent.getIntExtra("minute", 0)
 
+        val notificationId =
+            if (requestCode < 0) 999 else 100 + requestCode
+
         createAlarmChannel(context)
 
-        // Экран, который должен открыться как будильник
         val alarmActivityIntent = Intent(
             context,
             AlarmActivity::class.java
         ).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or
                     Intent.FLAG_ACTIVITY_CLEAR_TOP
+
+            putExtra("notificationId", notificationId)
         }
 
         val fullScreenPendingIntent = PendingIntent.getActivity(
             context,
-            if (requestCode < 0) 999 else requestCode,
+            notificationId,
             alarmActivityIntent,
             PendingIntent.FLAG_UPDATE_CURRENT or
                     PendingIntent.FLAG_IMMUTABLE
@@ -53,22 +57,21 @@ class ReminderReceiver : BroadcastReceiver() {
             .setPriority(NotificationCompat.PRIORITY_MAX)
             .setCategory(NotificationCompat.CATEGORY_ALARM)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-            .setOngoing(true)
-            .setAutoCancel(false)
             .setFullScreenIntent(fullScreenPendingIntent, true)
             .setContentIntent(fullScreenPendingIntent)
+            .setAutoCancel(true)
             .build()
 
         try {
-            NotificationManagerCompat.from(context).notify(
-                if (requestCode < 0) 999 else 100 + requestCode,
-                notification
-            )
+            NotificationManagerCompat
+                .from(context)
+                .notify(
+                    notificationId,
+                    notification
+                )
         } catch (_: SecurityException) {
         }
 
-        // Тест (-1) выполняется только один раз.
-        // Обычное напоминание назначаем на следующий рабочий день.
         if (requestCode >= 0) {
             ReminderScheduler.scheduleNext(
                 context = context,
@@ -91,7 +94,9 @@ class ReminderReceiver : BroadcastReceiver() {
 
         val audioAttributes = AudioAttributes.Builder()
             .setUsage(AudioAttributes.USAGE_ALARM)
-            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+            .setContentType(
+                AudioAttributes.CONTENT_TYPE_SONIFICATION
+            )
             .build()
 
         val channel = NotificationChannel(
@@ -102,17 +107,22 @@ class ReminderReceiver : BroadcastReceiver() {
             description = "Полноэкранные напоминания Сяоси"
 
             enableVibration(true)
+
             vibrationPattern = longArrayOf(
                 0, 700, 400, 700, 400
             )
 
-            setSound(alarmSound, audioAttributes)
+            setSound(
+                alarmSound,
+                audioAttributes
+            )
+
+            lockscreenVisibility =
+                android.app.Notification.VISIBILITY_PUBLIC
         }
 
-        val manager = context.getSystemService(
-            NotificationManager::class.java
-        )
-
-        manager.createNotificationChannel(channel)
+        context
+            .getSystemService(NotificationManager::class.java)
+            .createNotificationChannel(channel)
     }
 }
