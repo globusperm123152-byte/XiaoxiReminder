@@ -18,11 +18,25 @@ import androidx.core.app.ActivityCompat
 
 class MainActivity : AppCompatActivity() {
 
-    private var waitingForExactAlarmPermission = false
     private lateinit var enableButton: Button
+    private lateinit var testButton: Button
+
+    private var waitingForExactAlarmPermission = false
+
+    companion object {
+        private const val NOTIFICATION_PERMISSION_REQUEST = 100
+        private const val PREFS_NAME = "xiaoxi"
+        private const val KEY_REMINDERS_ENABLED = "reminders_enabled"
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        createInterface()
+        updateInterface()
+    }
+
+    private fun createInterface() {
 
         val layout = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -58,7 +72,6 @@ class MainActivity : AppCompatActivity() {
         }
 
         enableButton = Button(this).apply {
-            text = "ВКЛЮЧИТЬ НАПОМИНАНИЯ"
             textSize = 17f
 
             setOnClickListener {
@@ -66,58 +79,134 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        val testButton = Button(this).apply {
-    text = "ТЕСТ — УВЕДОМЛЕНИЕ ЧЕРЕЗ 2 МИНУТЫ"
+        testButton = Button(this).apply {
+            text = "ТЕСТ — УВЕДОМЛЕНИЕ ЧЕРЕЗ 2 МИНУТЫ"
+            textSize = 15f
 
-    setOnClickListener {
-        ReminderScheduler.scheduleTest(this@MainActivity)
-        text = "ТЕСТ ЗАПУЩЕН ✓"
-        isEnabled = false
+            setOnClickListener {
+                runTestReminder()
+            }
+        }
+
+        layout.addView(title)
+        layout.addView(info)
+        layout.addView(enableButton)
+        layout.addView(testButton)
+
+        setContentView(layout)
     }
-}
 
-layout.addView(title)
-layout.addView(info)
-layout.addView(enableButton)
-layout.addView(testButton)
+    private fun updateInterface() {
 
-setContentView(layout)
+        val enabled = getSharedPreferences(
+            PREFS_NAME,
+            MODE_PRIVATE
+        ).getBoolean(KEY_REMINDERS_ENABLED, false)
+
+        if (enabled) {
+            enableButton.text = "НАПОМИНАНИЯ ВКЛЮЧЕНЫ ✓"
+            enableButton.isEnabled = false
+        } else {
+            enableButton.text = "ВКЛЮЧИТЬ НАПОМИНАНИЯ"
+            enableButton.isEnabled = true
+        }
     }
 
     private fun enableReminders() {
 
-        if (
-            Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
-            ActivityCompat.checkSelfPermission(
-                this,
-                Manifest.permission.POST_NOTIFICATIONS
-            ) != PackageManager.PERMISSION_GRANTED
-        ) {
-            ActivityCompat.requestPermissions(
-                this,
-                arrayOf(Manifest.permission.POST_NOTIFICATIONS),
-                100
-            )
+        if (!hasNotificationPermission()) {
+            requestNotificationPermission()
             return
         }
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            val alarmManager = getSystemService(AlarmManager::class.java)
-
-            if (!alarmManager.canScheduleExactAlarms()) {
-                waitingForExactAlarmPermission = true
-
-                val intent = Intent(
-                    Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM,
-                    Uri.parse("package:$packageName")
-                )
-
-                startActivity(intent)
-                return
-            }
+        if (!hasExactAlarmPermission()) {
+            requestExactAlarmPermission()
+            return
         }
 
         startReminders()
+    }
+
+    private fun startReminders() {
+
+        ReminderScheduler.scheduleAll(this)
+
+        getSharedPreferences(
+            PREFS_NAME,
+            MODE_PRIVATE
+        )
+            .edit()
+            .putBoolean(KEY_REMINDERS_ENABLED, true)
+            .apply()
+
+        updateInterface()
+    }
+
+    private fun runTestReminder() {
+
+        if (!hasNotificationPermission()) {
+            requestNotificationPermission()
+            return
+        }
+
+        if (!hasExactAlarmPermission()) {
+            requestExactAlarmPermission()
+            return
+        }
+
+        ReminderScheduler.scheduleTest(this)
+
+        testButton.text = "ТЕСТ ЗАПУЩЕН ✓"
+        testButton.isEnabled = false
+    }
+
+    private fun hasNotificationPermission(): Boolean {
+
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+            return true
+        }
+
+        return ActivityCompat.checkSelfPermission(
+            this,
+            Manifest.permission.POST_NOTIFICATIONS
+        ) == PackageManager.PERMISSION_GRANTED
+    }
+
+    private fun requestNotificationPermission() {
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            ActivityCompat.requestPermissions(
+                this,
+                arrayOf(Manifest.permission.POST_NOTIFICATIONS),
+                NOTIFICATION_PERMISSION_REQUEST
+            )
+        }
+    }
+
+    private fun hasExactAlarmPermission(): Boolean {
+
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
+            return true
+        }
+
+        val alarmManager = getSystemService(AlarmManager::class.java)
+
+        return alarmManager.canScheduleExactAlarms()
+    }
+
+    private fun requestExactAlarmPermission() {
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+
+            waitingForExactAlarmPermission = true
+
+            val intent = Intent(
+                Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM,
+                Uri.parse("package:$packageName")
+            )
+
+            startActivity(intent)
+        }
     }
 
     override fun onRequestPermissionsResult(
@@ -132,7 +221,7 @@ setContentView(layout)
         )
 
         if (
-            requestCode == 100 &&
+            requestCode == NOTIFICATION_PERMISSION_REQUEST &&
             grantResults.isNotEmpty() &&
             grantResults[0] == PackageManager.PERMISSION_GRANTED
         ) {
@@ -143,28 +232,14 @@ setContentView(layout)
     override fun onResume() {
         super.onResume()
 
-        if (waitingForExactAlarmPermission) {
-            val alarmManager = getSystemService(AlarmManager::class.java)
+        updateInterface()
 
-            if (
-                Build.VERSION.SDK_INT < Build.VERSION_CODES.S ||
-                alarmManager.canScheduleExactAlarms()
-            ) {
-                waitingForExactAlarmPermission = false
-                startReminders()
-            }
+        if (
+            waitingForExactAlarmPermission &&
+            hasExactAlarmPermission()
+        ) {
+            waitingForExactAlarmPermission = false
+            startReminders()
         }
-    }
-
-    private fun startReminders() {
-        ReminderScheduler.scheduleAll(this)
-
-        getSharedPreferences("xiaoxi", MODE_PRIVATE)
-            .edit()
-            .putBoolean("reminders_enabled", true)
-            .apply()
-
-        enableButton.text = "НАПОМИНАНИЯ ВКЛЮЧЕНЫ ✓"
-        enableButton.isEnabled = false
     }
 }
