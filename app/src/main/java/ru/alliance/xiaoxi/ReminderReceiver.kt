@@ -6,8 +6,6 @@ import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import android.media.AudioAttributes
-import android.media.RingtoneManager
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
@@ -15,7 +13,7 @@ import androidx.core.app.NotificationManagerCompat
 class ReminderReceiver : BroadcastReceiver() {
 
     companion object {
-        private const val CHANNEL_ID = "xiaoxi_fullscreen_alarm_v3"
+        private const val CHANNEL_ID = "xiaoxi_alarm_v4"
     }
 
     override fun onReceive(context: Context, intent: Intent) {
@@ -26,66 +24,87 @@ class ReminderReceiver : BroadcastReceiver() {
         val alarmType = intent.getStringExtra("alarmType") ?: "regular"
         val stage = intent.getIntExtra("stage", 0)
 
-        val notificationId =
-            if (requestCode < 0) {
-                999
-            } else {
-                100 + requestCode
-            }
+        val notificationId = if (requestCode < 0) {
+            999
+        } else {
+            100 + requestCode
+        }
 
-        createAlarmChannel(context)
+        createChannel(context)
 
-        val alarmActivityIntent =
-            Intent(context, AlarmActivity::class.java).apply {
+        val activityIntent = Intent(
+            context,
+            AlarmActivity::class.java
+        )
 
-                flags =
-                    Intent.FLAG_ACTIVITY_NEW_TASK or
-                    Intent.FLAG_ACTIVITY_CLEAR_TOP
+        activityIntent.flags =
+            Intent.FLAG_ACTIVITY_NEW_TASK or
+            Intent.FLAG_ACTIVITY_CLEAR_TOP
 
-                putExtra("notificationId", notificationId)
-                putExtra("alarmType", alarmType)
-                putExtra("stage", stage)
-            }
+        activityIntent.putExtra(
+            "notificationId",
+            notificationId
+        )
 
-        val fullScreenPendingIntent =
+        activityIntent.putExtra(
+            "alarmType",
+            alarmType
+        )
+
+        activityIntent.putExtra(
+            "stage",
+            stage
+        )
+
+        val activityPendingIntent =
             PendingIntent.getActivity(
                 context,
                 notificationId,
-                alarmActivityIntent,
+                activityIntent,
                 PendingIntent.FLAG_UPDATE_CURRENT or
                     PendingIntent.FLAG_IMMUTABLE
             )
 
-        val notificationText =
-            when {
-                alarmType == "exercise" && stage == 1 ->
-                    "10 минут закончились"
+        val text = when {
+            alarmType == "exercise" && stage == 1 ->
+                "10 минут закончились"
 
-                alarmType == "exercise" && stage == 2 ->
-                    "5 минут ходьбы закончились"
+            alarmType == "exercise" && stage == 2 ->
+                "5 минут ходьбы закончились"
 
-                alarmType == "snooze" ->
-                    "Отложенное напоминание"
+            alarmType == "snooze" ->
+                "Пора сделать отложенную паузу"
 
-                else ->
-                    "Пора сделать рабочую паузу"
-            }
+            else ->
+                "Пора сделать рабочую паузу"
+        }
 
         val notification =
-            NotificationCompat.Builder(context, CHANNEL_ID)
+            NotificationCompat.Builder(
+                context,
+                CHANNEL_ID
+            )
                 .setSmallIcon(
                     android.R.drawable.ic_lock_idle_alarm
                 )
                 .setContentTitle("Сяоси")
-                .setContentText(notificationText)
-                .setPriority(NotificationCompat.PRIORITY_MAX)
-                .setCategory(NotificationCompat.CATEGORY_ALARM)
-                .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+                .setContentText(text)
+                .setPriority(
+                    NotificationCompat.PRIORITY_MAX
+                )
+                .setCategory(
+                    NotificationCompat.CATEGORY_ALARM
+                )
+                .setVisibility(
+                    NotificationCompat.VISIBILITY_PUBLIC
+                )
                 .setFullScreenIntent(
-                    fullScreenPendingIntent,
+                    activityPendingIntent,
                     true
                 )
-                .setContentIntent(fullScreenPendingIntent)
+                .setContentIntent(
+                    activityPendingIntent
+                )
                 .setAutoCancel(true)
                 .build()
 
@@ -99,28 +118,47 @@ class ReminderReceiver : BroadcastReceiver() {
         } catch (_: SecurityException) {
         }
 
-        // Только обычное рабочее напоминание
-        // назначаем снова на следующий рабочий день.
         if (
             alarmType == "regular" &&
             requestCode >= 0
         ) {
             ReminderScheduler.scheduleNext(
-                context = context,
-                requestCode = requestCode,
-                hour = hour,
-                minute = minute
+                context,
+                requestCode,
+                hour,
+                minute
             )
         }
     }
 
-    private fun createAlarmChannel(context: Context) {
+    private fun createChannel(context: Context) {
 
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
+        if (Build.VERSION.SDK_INT < 26) {
             return
         }
 
-        val alarmSound =
-            RingtoneManager.getDefaultUri(
-                RingtoneManager.TYPE_ALARM
-           
+        val manager =
+            context.getSystemService(
+                NotificationManager::class.java
+            )
+
+        val channel =
+            NotificationChannel(
+                CHANNEL_ID,
+                "Сяоси — будильник",
+                NotificationManager.IMPORTANCE_HIGH
+            )
+
+        channel.description =
+            "Напоминания и таймеры Сяоси"
+
+        channel.enableVibration(true)
+
+        channel.lockscreenVisibility =
+            android.app.Notification.VISIBILITY_PUBLIC
+
+        manager.createNotificationChannel(
+            channel
+        )
+    }
+}
