@@ -21,9 +21,13 @@ class AlarmActivity : AppCompatActivity() {
 
     private var ringtone: Ringtone? = null
     private var vibrator: Vibrator? = null
+    private var notificationId: Int = -1
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        notificationId =
+            intent.getIntExtra("notificationId", -1)
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
             setShowWhenLocked(true)
@@ -124,9 +128,9 @@ class AlarmActivity : AppCompatActivity() {
 
         vibrator =
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                val manager =
-                    getSystemService(VibratorManager::class.java)
-                manager.defaultVibrator
+                getSystemService(
+                    VibratorManager::class.java
+                ).defaultVibrator
             } else {
                 @Suppress("DEPRECATION")
                 getSystemService(VIBRATOR_SERVICE) as Vibrator
@@ -154,11 +158,14 @@ class AlarmActivity : AppCompatActivity() {
     }
 
     private fun removeNotification() {
-        val notificationManager =
-            getSystemService(NotificationManager::class.java)
 
-        // Удаляем все активные уведомления Сяоси
-        notificationManager.cancelAll()
+        if (notificationId < 0) {
+            return
+        }
+
+        getSystemService(
+            NotificationManager::class.java
+        ).cancel(notificationId)
     }
 
     override fun onDestroy() {
