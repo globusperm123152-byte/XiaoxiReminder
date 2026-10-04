@@ -1,5 +1,6 @@
 package ru.alliance.xiaoxi
 
+import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
@@ -14,48 +15,28 @@ import androidx.core.app.NotificationManagerCompat
 
 class ReminderReceiver : BroadcastReceiver() {
 
+    companion object {
+        private const val CHANNEL_ID = "xiaoxi_alarm_v4"
+        private const val TEST_NOTIFICATION_ID = 999
+    }
+
     override fun onReceive(context: Context, intent: Intent) {
 
-        val requestCode = intent.getIntExtra("requestCode", 0)
-        val hour = intent.getIntExtra("hour", 11)
+        val requestCode = intent.getIntExtra("requestCode", -1)
+        val hour = intent.getIntExtra("hour", 0)
         val minute = intent.getIntExtra("minute", 0)
 
-        // Новый ID специально: Android создаст совершенно новый канал.
-        val channelId = "xiaoxi_alarm_v3"
+        createNotificationChannel(context)
 
-        val soundUri =
-            RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-
-            val audioAttributes = AudioAttributes.Builder()
-                .setUsage(AudioAttributes.USAGE_ALARM)
-                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                .build()
-
-            val channel = NotificationChannel(
-                channelId,
-                "Сяоси — рабочие паузы",
-                NotificationManager.IMPORTANCE_HIGH
-            ).apply {
-                description = "Звуковые напоминания о рабочих паузах"
-                enableVibration(true)
-                vibrationPattern = longArrayOf(0, 500, 300, 500)
-                setSound(soundUri, audioAttributes)
-                lockscreenVisibility = android.app.Notification.VISIBILITY_PUBLIC
-            }
-
-            val manager =
-                context.getSystemService(Context.NOTIFICATION_SERVICE)
-                        as NotificationManager
-
-            manager.createNotificationChannel(channel)
+        val openAppIntent = Intent(
+            context,
+            MainActivity::class.java
+        ).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or
+                    Intent.FLAG_ACTIVITY_CLEAR_TOP
         }
 
-        val openAppIntent =
-            Intent(context, MainActivity::class.java)
-
-        val pendingIntent = PendingIntent.getActivity(
+        val contentIntent = PendingIntent.getActivity(
             context,
             0,
             openAppIntent,
@@ -63,40 +44,101 @@ class ReminderReceiver : BroadcastReceiver() {
                     PendingIntent.FLAG_IMMUTABLE
         )
 
-        val notification =
-            NotificationCompat.Builder(context, channelId)
-                .setSmallIcon(android.R.drawable.ic_popup_reminder)
-                .setContentTitle("Сяоси")
-                .setContentText(
-                    "Пора сделать паузу: 10 минут для глаз и 5 минут спокойно походить."
-                )
-                .setPriority(NotificationCompat.PRIORITY_HIGH)
-                .setCategory(NotificationCompat.CATEGORY_ALARM)
-                .setSound(soundUri)
-                .setVibrate(longArrayOf(0, 500, 300, 500))
-                .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-                .setAutoCancel(true)
-                .setContentIntent(pendingIntent)
-                .build()
+        val alarmSound = RingtoneManager.getDefaultUri(
+            RingtoneManager.TYPE_ALARM
+        )
+
+        val notification = NotificationCompat.Builder(
+            context,
+            CHANNEL_ID
+        )
+            .setSmallIcon(android.R.drawable.ic_popup_reminder)
+            .setContentTitle("Сяоси")
+            .setContentText(
+                "Пора сделать паузу: 10 минут для глаз и 5 минут спокойно походить."
+            )
+            .setPriority(NotificationCompat.PRIORITY_MAX)
+            .setCategory(NotificationCompat.CATEGORY_ALARM)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            .setSound(alarmSound)
+            .setVibrate(longArrayOf(0, 700, 300, 700))
+            .setDefaults(NotificationCompat.DEFAULT_LIGHTS)
+            .setAutoCancel(true)
+            .setContentIntent(contentIntent)
+            .build()
 
         try {
+            val notificationId =
+                if (requestCode < 0) {
+                    TEST_NOTIFICATION_ID
+                } else {
+                    100 + requestCode
+                }
+
             NotificationManagerCompat
                 .from(context)
-                .notify(
-                    if (requestCode < 0) 999 else requestCode + 100,
-                    notification
-                )
+                .notify(notificationId, notification)
+
         } catch (_: SecurityException) {
         }
 
-        // Тестовое уведомление (-1) повторно не планируем.
+        // Обычное рабочее напоминание планируем
+        // заново на следующий рабочий день.
+        // Тестовое (-1) больше не повторяем.
         if (requestCode >= 0) {
             ReminderScheduler.scheduleNext(
-                context,
-                requestCode,
-                hour,
-                minute
+                context = context,
+                requestCode = requestCode,
+                hour = hour,
+                minute = minute
             )
         }
+    }
+
+    private fun createNotificationChannel(context: Context) {
+
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
+            return
+        }
+
+        val alarmSound = RingtoneManager.getDefaultUri(
+            RingtoneManager.TYPE_ALARM
+        )
+
+        val audioAttributes = AudioAttributes.Builder()
+            .setUsage(AudioAttributes.USAGE_ALARM)
+            .setContentType(
+                AudioAttributes.CONTENT_TYPE_SONIFICATION
+            )
+            .build()
+
+        val channel = NotificationChannel(
+            CHANNEL_ID,
+            "Сяоси — рабочие паузы",
+            NotificationManager.IMPORTANCE_HIGH
+        ).apply {
+
+            description =
+                "Звуковые напоминания о рабочих паузах"
+
+            enableVibration(true)
+
+            vibrationPattern =
+                longArrayOf(0, 700, 300, 700)
+
+            setSound(
+                alarmSound,
+                audioAttributes
+            )
+
+            lockscreenVisibility =
+                Notification.VISIBILITY_PUBLIC
+        }
+
+        val manager = context.getSystemService(
+            NotificationManager::class.java
+        )
+
+        manager.createNotificationChannel(channel)
     }
 }
