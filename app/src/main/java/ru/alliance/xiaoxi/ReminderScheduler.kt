@@ -30,6 +30,9 @@ object ReminderScheduler {
 
         // Сяоши — дневной сон в 13:30
         scheduleNextXiaoshi(context)
+
+        // Цигун — 5 минут в 16:30
+        scheduleNextQigong(context)
     }
 
     fun scheduleNext(
@@ -73,7 +76,25 @@ object ReminderScheduler {
         )
     }
 
-    // Тест обычной Сяоси через 2 минуты
+    fun scheduleNextQigong(context: Context) {
+
+        val calendar = nextWeekdayTime(
+            16,
+            30
+        )
+
+        scheduleAlarmClock(
+            context,
+            4001,
+            calendar.timeInMillis,
+            16,
+            30,
+            "qigong",
+            0
+        )
+    }
+
+    // Тест Сяоси через 2 минуты
     fun scheduleTest(context: Context) {
 
         scheduleAlarmClock(
@@ -97,6 +118,20 @@ object ReminderScheduler {
             0,
             0,
             "xiaoshi",
+            0
+        )
+    }
+
+    // Тест Цигун через 2 минуты
+    fun scheduleQigongTest(context: Context) {
+
+        scheduleAlarmClock(
+            context,
+            4004,
+            System.currentTimeMillis() + 2 * 60 * 1000L,
+            0,
+            0,
+            "qigong",
             0
         )
     }
@@ -141,7 +176,7 @@ object ReminderScheduler {
         )
     }
 
-    // Таймер дневного сна Сяоши
+    // Таймер Сяоши
     fun scheduleXiaoshiTimer(
         context: Context,
         minutes: Int
@@ -173,6 +208,42 @@ object ReminderScheduler {
             0,
             0,
             "xiaoshi_snooze",
+            0
+        )
+    }
+
+    // Таймер Цигун
+    fun scheduleQigongTimer(
+        context: Context,
+        minutes: Int
+    ) {
+
+        scheduleAlarmClock(
+            context,
+            4002,
+            System.currentTimeMillis() +
+                minutes * 60 * 1000L,
+            0,
+            0,
+            "qigong_timer",
+            0
+        )
+    }
+
+    // Отложенный Цигун
+    fun scheduleQigongSnooze(
+        context: Context,
+        minutes: Int
+    ) {
+
+        scheduleAlarmClock(
+            context,
+            4003,
+            System.currentTimeMillis() +
+                minutes * 60 * 1000L,
+            0,
+            0,
+            "qigong_snooze",
             0
         )
     }
