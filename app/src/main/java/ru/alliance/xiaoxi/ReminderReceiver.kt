@@ -25,6 +25,21 @@ class ReminderReceiver : BroadcastReceiver() {
         val alarmType = intent.getStringExtra("alarmType") ?: "regular"
         val stage = intent.getIntExtra("stage", 0)
 
+        if (alarmType == "exercise" ||
+            alarmType == "xiaoshi_timer" ||
+            alarmType == "xiaoshi_timer_test" ||
+            alarmType == "qigong_timer" ||
+            alarmType == "qigong_timer_test") {
+            val key = when {
+                alarmType == "exercise" && stage == 1 -> "countdown_xiaoxi_eyes"
+                alarmType == "exercise" -> "countdown_xiaoxi_walk"
+                alarmType.startsWith("xiaoshi") -> "countdown_xiaoshi"
+                else -> "countdown_qigong"
+            }
+            context.getSharedPreferences("xiaoxi", Context.MODE_PRIVATE)
+                .edit().remove(key).apply()
+        }
+
         val notificationId =
             if (requestCode < 0) 999 else 100 + requestCode
 
