@@ -28,6 +28,7 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var enableButton: Button
     private lateinit var countdownLabel: TextView
+    private lateinit var stopButton: Button
     private val countdownHandler = Handler(Looper.getMainLooper())
     private val countdownTick = object : Runnable {
         override fun run() {
@@ -168,6 +169,31 @@ class MainActivity : AppCompatActivity() {
         label(currentCard, "ТЕКУЩАЯ ПРАКТИКА", 11f, accent, true, 12)
         countdownLabel = label(currentCard, "Всё спокойно", 29f, ink, true, 7)
         label(currentCard, "Дыши ровно. Всё идёт своим чередом.", 13f, muted)
+        stopButton = Button(this).apply {
+            text = "Остановить упражнение"
+            isAllCaps = false
+            textSize = 15f
+            setTextColor(ink)
+            backgroundTintList = ColorStateList.valueOf(Color.rgb(91, 83, 72))
+            setOnClickListener {
+                androidx.appcompat.app.AlertDialog.Builder(this@MainActivity)
+                    .setTitle("Завершить упражнение?")
+                    .setMessage("Обратный отсчёт и сигнал окончания будут отменены.")
+                    .setNegativeButton("Продолжить", null)
+                    .setPositiveButton("Остановить") { _, _ ->
+                        ReminderScheduler.stopActivePractice(this@MainActivity)
+                        getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
+                            .remove("countdown_xiaoxi_eyes")
+                            .remove("countdown_xiaoxi_walk")
+                            .remove("countdown_xiaoshi")
+                            .remove("countdown_qigong")
+                            .apply()
+                        updateCountdown()
+                    }
+                    .show()
+            }
+        }
+        currentCard.addView(stopButton)
 
         val xiaoxi = card()
         label(xiaoxi, "01   /   ВОССТАНОВЛЕНИЕ", 11f, accent, true, 10)
@@ -250,6 +276,10 @@ class MainActivity : AppCompatActivity() {
         val current = entries.map { it.first to prefs.getLong(it.second, 0L) }
             .filter { it.second > now }
             .minByOrNull { it.second }
+        if (::stopButton.isInitialized) {
+            stopButton.visibility = if (current == null)
+                android.view.View.GONE else android.view.View.VISIBLE
+        }
         countdownLabel.text = if (current == null) {
             "Всё спокойно ☺"
         } else {
