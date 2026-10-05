@@ -2,6 +2,7 @@ package ru.alliance.xiaoxi
 
 import android.Manifest
 import android.app.AlarmManager
+import android.app.TimePickerDialog
 import android.app.NotificationManager
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -21,6 +22,7 @@ import androidx.core.app.ActivityCompat
 class MainActivity : AppCompatActivity() {
 
     private lateinit var enableButton: Button
+    private val timeButtons = mutableMapOf<String, Button>()
     private lateinit var testButton: Button
     private lateinit var xiaoshiTestButton: Button
     private lateinit var qigongTestButton: Button
@@ -62,38 +64,55 @@ class MainActivity : AppCompatActivity() {
             gravity = Gravity.CENTER_HORIZONTAL
         }
 
-        val info = TextView(this).apply {
-            text = """
-                
-                РАБОЧИЕ ПАУЗЫ — СЯОСИ
-                
-                Понедельник — пятница
-                
-                11:00
-                12:30
-                14:00
-                15:30
-                17:00
-                
-                10 минут — закрыть глаза
-                5 минут — спокойно походить
-                
-                СЯОШИ — ДНЕВНОЙ СОН
-                
-                13:30
-                
-                25 минут отдыха
-                
-                ЦИГУН
-                
-                16:30
-                
-                5 минут — дыхание и плавные движения
-            """.trimIndent()
-
-            textSize = 19f
-            setTextColor(Color.DKGRAY)
+        fun heading(textValue: String) {
+            layout.addView(TextView(this).apply {
+                text = textValue
+                textSize = 19f
+                setTextColor(Color.DKGRAY)
+                setPadding(0, 22, 0, 6)
+            })
         }
+
+        fun timeRow(key: String, hour: Int, minute: Int) {
+            val button = Button(this).apply {
+                textSize = 18f
+                isAllCaps = false
+                text = String.format(java.util.Locale.getDefault(), "%02d:%02d", hour, minute)
+                setOnClickListener {
+                    val current = readTime(key, hour, minute)
+                    TimePickerDialog(
+                        this@MainActivity,
+                        { _, selectedHour, selectedMinute ->
+                            val total = selectedHour * 60 + selectedMinute
+                            getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+                                .edit().putInt(key, total).apply()
+                            updateTimeButtons()
+                            if (getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+                                    .getBoolean(KEY_REMINDERS_ENABLED, false)) {
+                                ReminderScheduler.scheduleSavedTime(this@MainActivity, key)
+                            }
+                        },
+                        current.first, current.second, true
+                    ).show()
+                }
+            }
+            timeButtons[key] = button
+            layout.addView(button)
+        }
+
+        heading("РАБОЧИЕ ПАУЗЫ — СЯОСИ")
+        heading("Понедельник — пятница. Нажми на время, чтобы изменить:")
+        listOf(11 to 0, 12 to 30, 14 to 0, 15 to 30, 17 to 0)
+            .forEachIndexed { index, time ->
+                timeRow("time_xiaoxi_$index", time.first, time.second)
+            }
+        heading("10 минут — закрыть глаза; 5 минут — спокойно походить")
+        heading("СЯОШИ — ДНЕВНОЙ СОН")
+        timeRow("time_xiaoshi", 13, 30)
+        heading("25 минут отдыха")
+        heading("ЦИГУН")
+        timeRow("time_qigong", 16, 30)
+        heading("5 минут — дыхание и плавные движения")
 
         enableButton = Button(this).apply {
             textSize = 17f
@@ -127,7 +146,6 @@ class MainActivity : AppCompatActivity() {
         }
 
         layout.addView(title)
-        layout.addView(info)
         layout.addView(enableButton)
         layout.addView(testButton)
         layout.addView(xiaoshiTestButton)
@@ -140,7 +158,33 @@ class MainActivity : AppCompatActivity() {
         setContentView(scrollView)
     }
 
+    private fun readTime(key: String, defaultHour: Int, defaultMinute: Int): Pair<Int, Int> {
+        val minutes = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+            .getInt(key, defaultHour * 60 + defaultMinute)
+        return (minutes / 60) to (minutes % 60)
+    }
+
+    private fun updateTimeButtons() {
+        val defaults = mapOf(
+            "time_xiaoxi_0" to (11 to 0),
+            "time_xiaoxi_1" to (12 to 30),
+            "time_xiaoxi_2" to (14 to 0),
+            "time_xiaoxi_3" to (15 to 30),
+            "time_xiaoxi_4" to (17 to 0),
+            "time_xiaoshi" to (13 to 30),
+            "time_qigong" to (16 to 30)
+        )
+        timeButtons.forEach { (key, button) ->
+            val default = defaults.getValue(key)
+            val time = readTime(key, default.first, default.second)
+            button.text = String.format(
+                java.util.Locale.getDefault(), "%02d:%02d", time.first, time.second
+            )
+        }
+    }
+
     private fun updateInterface() {
+        updateTimeButtons()
 
         val enabled =
             getSharedPreferences(
