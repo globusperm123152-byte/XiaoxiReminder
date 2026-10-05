@@ -117,7 +117,7 @@ object ReminderScheduler {
             System.currentTimeMillis() + 2 * 60 * 1000L,
             0,
             0,
-            "xiaoshi",
+            "xiaoshi_test",
             0
         )
     }
@@ -131,7 +131,7 @@ object ReminderScheduler {
             System.currentTimeMillis() + 2 * 60 * 1000L,
             0,
             0,
-            "qigong",
+            "qigong_test",
             0
         )
     }
@@ -179,7 +179,8 @@ object ReminderScheduler {
     // Таймер Сяоши
     fun scheduleXiaoshiTimer(
         context: Context,
-        minutes: Int
+        minutes: Int,
+        isTest: Boolean = false
     ) {
 
         scheduleAlarmClock(
@@ -189,7 +190,7 @@ object ReminderScheduler {
                 minutes * 60 * 1000L,
             0,
             0,
-            "xiaoshi_timer",
+            if (isTest) "xiaoshi_timer_test" else "xiaoshi_timer",
             0
         )
     }
@@ -215,7 +216,8 @@ object ReminderScheduler {
     // Таймер Цигун
     fun scheduleQigongTimer(
         context: Context,
-        minutes: Int
+        minutes: Int,
+        isTest: Boolean = false
     ) {
 
         scheduleAlarmClock(
@@ -225,7 +227,7 @@ object ReminderScheduler {
                 minutes * 60 * 1000L,
             0,
             0,
-            "qigong_timer",
+            if (isTest) "qigong_timer_test" else "qigong_timer",
             0
         )
     }
