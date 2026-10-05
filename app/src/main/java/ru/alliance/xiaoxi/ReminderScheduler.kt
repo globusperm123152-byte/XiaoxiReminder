@@ -19,13 +19,8 @@ object ReminderScheduler {
     fun scheduleAll(context: Context) {
 
         // Сяоси
-        xiaoxiTimes.forEachIndexed { index, time ->
-            scheduleNext(
-                context,
-                index,
-                time.first,
-                time.second
-            )
+        xiaoxiTimes.indices.forEach { index ->
+            scheduleNextXiaoxi(context, index)
         }
 
         // Сяоши — дневной сон в 13:30
@@ -33,6 +28,37 @@ object ReminderScheduler {
 
         // Цигун — 5 минут в 16:30
         scheduleNextQigong(context)
+    }
+
+    private fun getTime(context: Context, key: String, hour: Int, minute: Int): Pair<Int, Int> {
+        val saved = context.getSharedPreferences("xiaoxi", Context.MODE_PRIVATE)
+            .getInt(key, hour * 60 + minute)
+        return (saved / 60) to (saved % 60)
+    }
+
+    fun getXiaoxiTime(context: Context, index: Int): Pair<Int, Int> {
+        val default = xiaoxiTimes[index]
+        return getTime(context, "time_xiaoxi_$index", default.first, default.second)
+    }
+
+    fun getXiaoshiTime(context: Context): Pair<Int, Int> =
+        getTime(context, "time_xiaoshi", 13, 30)
+
+    fun getQigongTime(context: Context): Pair<Int, Int> =
+        getTime(context, "time_qigong", 16, 30)
+
+    fun scheduleNextXiaoxi(context: Context, index: Int) {
+        val time = getXiaoxiTime(context, index)
+        scheduleNext(context, index, time.first, time.second)
+    }
+
+    fun scheduleSavedTime(context: Context, key: String) {
+        when {
+            key.startsWith("time_xiaoxi_") ->
+                scheduleNextXiaoxi(context, key.removePrefix("time_xiaoxi_").toInt())
+            key == "time_xiaoshi" -> scheduleNextXiaoshi(context)
+            key == "time_qigong" -> scheduleNextQigong(context)
+        }
     }
 
     fun scheduleNext(
@@ -60,17 +86,15 @@ object ReminderScheduler {
 
     fun scheduleNextXiaoshi(context: Context) {
 
-        val calendar = nextWeekdayTime(
-            13,
-            30
-        )
+        val (hour, minute) = getXiaoshiTime(context)
+        val calendar = nextWeekdayTime(hour, minute)
 
         scheduleAlarmClock(
             context,
             3001,
             calendar.timeInMillis,
-            13,
-            30,
+            hour,
+            minute,
             "xiaoshi",
             0
         )
@@ -78,17 +102,15 @@ object ReminderScheduler {
 
     fun scheduleNextQigong(context: Context) {
 
-        val calendar = nextWeekdayTime(
-            16,
-            30
-        )
+        val (hour, minute) = getQigongTime(context)
+        val calendar = nextWeekdayTime(hour, minute)
 
         scheduleAlarmClock(
             context,
             4001,
             calendar.timeInMillis,
-            16,
-            30,
+            hour,
+            minute,
             "qigong",
             0
         )
