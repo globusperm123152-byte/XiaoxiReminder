@@ -14,6 +14,7 @@ class ReminderReceiver : BroadcastReceiver() {
 
     companion object {
         private const val CHANNEL_ID = "xiaoxi_alarm_v4"
+        private const val FINISH_CHANNEL_ID = "xiaoxi_finish_alarm_v5"
     }
 
     override fun onReceive(context: Context, intent: Intent) {
@@ -60,6 +61,12 @@ class ReminderReceiver : BroadcastReceiver() {
             alarmType == "snooze" ->
                 "Пора сделать отложенную паузу"
 
+            alarmType == "xiaoshi_test" ->
+                "Тест дневного сна — 2 минуты"
+
+            alarmType == "xiaoshi_timer_test" ->
+                "Тест сна завершён — 2 минуты"
+
             alarmType == "xiaoshi" ->
                 "Время дневного сна"
 
@@ -68,6 +75,12 @@ class ReminderReceiver : BroadcastReceiver() {
 
             alarmType == "xiaoshi_snooze" ->
                 "Пора на отложенный дневной сон"
+
+            alarmType == "qigong_test" ->
+                "Тест Цигун — 2 минуты"
+
+            alarmType == "qigong_timer_test" ->
+                "Тест Цигун завершён — 2 минуты"
 
             alarmType == "qigong" ->
                 "Время сделать Цигун"
@@ -84,19 +97,24 @@ class ReminderReceiver : BroadcastReceiver() {
 
         val title =
             if (
-                alarmType == "qigong" ||
-                alarmType == "qigong_timer" ||
-                alarmType == "qigong_snooze"
+                alarmType.startsWith("qigong") ||
+                false
             ) {
                 "Цигун"
             } else {
                 "Сяоси"
             }
 
+        val isCompletion = alarmType == "xiaoshi_timer" ||
+            alarmType == "xiaoshi_timer_test" ||
+            alarmType == "qigong_timer" ||
+            alarmType == "qigong_timer_test" ||
+            alarmType == "exercise"
+
         val notification =
             NotificationCompat.Builder(
                 context,
-                CHANNEL_ID
+                if (isCompletion) FINISH_CHANNEL_ID else CHANNEL_ID
             )
                 .setSmallIcon(
                     android.R.drawable.ic_lock_idle_alarm
@@ -186,8 +204,30 @@ class ReminderReceiver : BroadcastReceiver() {
         channel.lockscreenVisibility =
             android.app.Notification.VISIBILITY_PUBLIC
 
-        manager.createNotificationChannel(
-            channel
+        manager.createNotificationChannel(channel)
+
+        // Separate alarm channel: HONOR may suppress full-screen
+        // presentation for a timer completion, so it must also
+        // sound and vibrate without opening the notification.
+        val finishChannel = NotificationChannel(
+            FINISH_CHANNEL_ID,
+            "Завершение практики — будильник",
+            NotificationManager.IMPORTANCE_HIGH
         )
+        finishChannel.setSound(
+            android.media.RingtoneManager.getDefaultUri(
+                android.media.RingtoneManager.TYPE_ALARM
+            ),
+            android.media.AudioAttributes.Builder()
+                .setUsage(android.media.AudioAttributes.USAGE_ALARM)
+                .setContentType(
+                    android.media.AudioAttributes.CONTENT_TYPE_SONIFICATION
+                )
+                .build()
+        )
+        finishChannel.enableVibration(true)
+        finishChannel.lockscreenVisibility =
+            android.app.Notification.VISIBILITY_PUBLIC
+        manager.createNotificationChannel(finishChannel)
     }
 }
