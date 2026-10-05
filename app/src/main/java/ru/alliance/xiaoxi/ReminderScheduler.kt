@@ -272,6 +272,21 @@ object ReminderScheduler {
         )
     }
 
+    fun stopActivePractice(context: Context) {
+        val manager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        for (code in listOf(1001, 1002, 3002, 4002)) {
+            val intent = Intent(context, ReminderReceiver::class.java)
+            val pending = PendingIntent.getBroadcast(
+                context, code, intent,
+                PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE
+            )
+            if (pending != null) {
+                manager.cancel(pending)
+                pending.cancel()
+            }
+        }
+    }
+
     private fun nextWeekdayTime(
         hour: Int,
         minute: Int
