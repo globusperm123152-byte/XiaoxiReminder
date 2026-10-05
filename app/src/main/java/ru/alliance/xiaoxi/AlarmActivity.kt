@@ -154,25 +154,25 @@ class AlarmActivity : AppCompatActivity() {
             alarmType == "qigong_timer_test" -> """
                 Тест Цигун завершён ✓
 
-                2 минуты закончились
+                1 минута закончилась
             """.trimIndent()
 
             alarmType == "qigong_test" -> """
                 Тест Цигун
 
-                2 минуты — дыхание и плавные движения
+                1 минута — дыхание и плавные движения
             """.trimIndent()
 
             alarmType == "xiaoshi_timer_test" -> """
                 Тест Сяоши завершён ✓
 
-                2 минуты отдыха закончились
+                1 минута отдыха закончились
             """.trimIndent()
 
             alarmType == "xiaoshi_test" -> """
                 Тест Сяоши
 
-                2 минуты отдыха
+                1 минута отдыха
             """.trimIndent()
 
             alarmType == "qigong_timer" -> """
@@ -330,7 +330,7 @@ class AlarmActivity : AppCompatActivity() {
 
                 ReminderScheduler.scheduleQigongTimer(
                     context = this,
-                    minutes = if (alarmType == "qigong_test") 2 else 5,
+                    minutes = if (alarmType == "qigong_test") 1 else 5,
                     isTest = alarmType == "qigong_test"
                 )
 
@@ -347,7 +347,7 @@ class AlarmActivity : AppCompatActivity() {
 
                 ReminderScheduler.scheduleXiaoshiTimer(
                     context = this,
-                    minutes = if (alarmType == "xiaoshi_test") 2 else 25,
+                    minutes = if (alarmType == "xiaoshi_test") 1 else 25,
                     isTest = alarmType == "xiaoshi_test"
                 )
 
