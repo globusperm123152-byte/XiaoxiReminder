@@ -308,6 +308,33 @@ class AlarmActivity : AppCompatActivity() {
         }
     }
 
+    private fun saveCountdown(key: String, minutes: Int) {
+        val editor = getSharedPreferences("xiaoxi", MODE_PRIVATE).edit()
+        listOf(
+            "countdown_xiaoxi_eyes", "countdown_xiaoxi_walk",
+            "countdown_xiaoshi", "countdown_qigong"
+        ).forEach { editor.remove(it) }
+        editor.putLong(key, System.currentTimeMillis() + minutes * 60_000L)
+        editor.apply()
+    }
+
+    private fun showCountdownScreen() {
+        startActivity(android.content.Intent(this, MainActivity::class.java).apply {
+            flags = android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP
+        })
+        finish()
+    }
+
+    private fun clearCountdown() {
+        getSharedPreferences("xiaoxi", MODE_PRIVATE).edit()
+            .remove("countdown_xiaoxi_eyes")
+            .remove("countdown_xiaoxi_walk")
+            .remove("countdown_xiaoshi")
+            .remove("countdown_qigong")
+            .apply()
+    }
+
     private fun handleMainButton() {
 
         stopAlarm()
@@ -317,10 +344,12 @@ class AlarmActivity : AppCompatActivity() {
 
             alarmType == "qigong_timer_test" ||
             alarmType == "xiaoshi_timer_test" -> {
+                clearCountdown()
                 finish()
             }
 
             alarmType == "qigong_timer" -> {
+                clearCountdown()
                 finish()
             }
 
@@ -333,11 +362,12 @@ class AlarmActivity : AppCompatActivity() {
                     minutes = if (alarmType == "qigong_test") 1 else 5,
                     isTest = alarmType == "qigong_test"
                 )
-
-                finish()
+                saveCountdown("countdown_qigong", if (alarmType == "qigong_test") 1 else 5)
+                showCountdownScreen()
             }
 
             alarmType == "xiaoshi_timer" -> {
+                clearCountdown()
                 finish()
             }
 
@@ -350,8 +380,8 @@ class AlarmActivity : AppCompatActivity() {
                     minutes = if (alarmType == "xiaoshi_test") 1 else 25,
                     isTest = alarmType == "xiaoshi_test"
                 )
-
-                finish()
+                saveCountdown("countdown_xiaoshi", if (alarmType == "xiaoshi_test") 1 else 25)
+                showCountdownScreen()
             }
 
             alarmType == "exercise" && stage == 1 -> {
@@ -361,11 +391,12 @@ class AlarmActivity : AppCompatActivity() {
                     minutes = 5,
                     stage = 2
                 )
-
-                finish()
+                saveCountdown("countdown_xiaoxi_walk", 5)
+                showCountdownScreen()
             }
 
             alarmType == "exercise" && stage == 2 -> {
+                clearCountdown()
                 finish()
             }
 
@@ -376,8 +407,8 @@ class AlarmActivity : AppCompatActivity() {
                     minutes = 10,
                     stage = 1
                 )
-
-                finish()
+                saveCountdown("countdown_xiaoxi_eyes", 10)
+                showCountdownScreen()
             }
         }
     }
@@ -405,6 +436,7 @@ class AlarmActivity : AppCompatActivity() {
 
                         stopAlarm()
                         removeNotification()
+                        clearCountdown()
 
                         when {
                             isXiaoshi() -> {
@@ -438,6 +470,7 @@ class AlarmActivity : AppCompatActivity() {
                     1 -> {
                         stopAlarm()
                         removeNotification()
+                        clearCountdown()
                         finish()
                     }
                 }
