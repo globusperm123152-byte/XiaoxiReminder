@@ -201,8 +201,7 @@ class MainActivity : AppCompatActivity() {
 
         ReminderScheduler.scheduleTest(this)
 
-        testButton.text = "ТЕСТ СЯОСИ ЗАПУЩЕН ✓"
-        testButton.isEnabled = false
+        markTestStarted("xiaoxi_test_until")
     }
 
     private fun startXiaoshiTest() {
@@ -211,8 +210,7 @@ class MainActivity : AppCompatActivity() {
 
         ReminderScheduler.scheduleXiaoshiTest(this)
 
-        xiaoshiTestButton.text = "ТЕСТ СЯОШИ ЗАПУЩЕН ✓"
-        xiaoshiTestButton.isEnabled = false
+        markTestStarted("xiaoshi_test_until")
     }
 
     private fun startQigongTest() {
@@ -221,8 +219,29 @@ class MainActivity : AppCompatActivity() {
 
         ReminderScheduler.scheduleQigongTest(this)
 
-        qigongTestButton.text = "ТЕСТ ЦИГУН ЗАПУЩЕН ✓"
-        qigongTestButton.isEnabled = false
+        markTestStarted("qigong_test_until")
+    }
+
+    private fun refreshTestButtons() {
+        val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+        val now = System.currentTimeMillis()
+        val buttons = listOf(
+            Triple(testButton, "xiaoxi_test_until", "ТЕСТ СЯОСИ — ЧЕРЕЗ 1 МИНУТУ"),
+            Triple(xiaoshiTestButton, "xiaoshi_test_until", "ТЕСТ СЯОШИ — ЧЕРЕЗ 1 МИНУТУ"),
+            Triple(qigongTestButton, "qigong_test_until", "ТЕСТ ЦИГУН — ЧЕРЕЗ 1 МИНУТУ")
+        )
+        buttons.forEach { (button, key, label) ->
+            val pending = prefs.getLong(key, 0L) > now
+            button.isEnabled = !pending
+            button.text = if (pending) "ТЕСТ ЗАПУЩЕН ✓" else label
+        }
+    }
+
+    private fun markTestStarted(key: String) {
+        getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
+            .putLong(key, System.currentTimeMillis() + 60_000L)
+            .apply()
+        refreshTestButtons()
     }
 
     private fun permissionsReady(): Boolean {
@@ -343,6 +362,9 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
 
+        // A test button is only locked while its one-minute alarm is pending.
+        // Returning from an alarm or reopening the app refreshes its state.
+        refreshTestButtons()
         updateInterface()
 
         if (
