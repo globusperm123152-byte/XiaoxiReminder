@@ -35,7 +35,7 @@ class MainActivity : AppCompatActivity() {
             countdownHandler.postDelayed(this, 1000L)
         }
     }
-    private val timeButtons = mutableMapOf<String, Button>()
+    private val timeButtons = mutableMapOf<String, TextView>()
     private lateinit var testButton: Button
     private lateinit var xiaoshiTestButton: Button
     private lateinit var qigongTestButton: Button
@@ -63,124 +63,176 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun rounded(color: Int, radius: Float = 28f): GradientDrawable =
+    private fun dp(value: Int): Int =
+        (value * resources.displayMetrics.density + 0.5f).toInt()
+
+    private val ink = Color.rgb(34, 42, 46)
+    private val muted = Color.rgb(113, 120, 122)
+    private val canvasColor = Color.rgb(248, 248, 245)
+    private val accent = Color.rgb(56, 105, 93)
+
+    private fun shape(color: Int, radius: Int = 18, border: Int? = null): GradientDrawable =
         GradientDrawable().apply {
-            cornerRadius = radius
+            cornerRadius = dp(radius).toFloat()
             setColor(color)
+            if (border != null) setStroke(dp(1), border)
         }
 
     private fun createInterface() {
+        window.statusBarColor = canvasColor
+        window.navigationBarColor = canvasColor
+        @Suppress("DEPRECATION")
+        window.decorView.systemUiVisibility =
+            android.view.View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR or
+            android.view.View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
+
         val page = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(36, 38, 36, 48)
-            setBackgroundColor(Color.rgb(245, 248, 253))
+            setPadding(dp(22), dp(32), dp(22), dp(42))
+            setBackgroundColor(canvasColor)
         }
-        fun card(color: Int): LinearLayout {
-            val content = LinearLayout(this).apply {
-                orientation = LinearLayout.VERTICAL
-                setPadding(28, 24, 28, 26)
-                background = rounded(color)
-                elevation = 5f
-            }
-            page.addView(content, LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            ).apply { bottomMargin = 22 })
-            return content
-        }
-        fun text(parent: LinearLayout, value: String, size: Float, color: Int, bold: Boolean = false) {
-            parent.addView(TextView(this).apply {
-                this.text = value
+
+        fun label(
+            parent: LinearLayout, value: String, size: Float,
+            color: Int = ink, bold: Boolean = false, bottom: Int = 0
+        ): TextView {
+            val view = TextView(this).apply {
+                text = value
                 textSize = size
                 setTextColor(color)
                 if (bold) setTypeface(null, Typeface.BOLD)
-                setPadding(0, 5, 0, 9)
-            })
+                includeFontPadding = false
+                letterSpacing = if (size <= 13f) 0.07f else 0f
+            }
+            parent.addView(view, LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { bottomMargin = dp(bottom) })
+            return view
         }
-        fun timeRow(parent: LinearLayout, key: String, hour: Int, minute: Int) {
-            val button = Button(this).apply {
+
+        fun card(background: Int = Color.WHITE): LinearLayout {
+            val block = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                setPadding(dp(20), dp(20), dp(20), dp(20))
+                this.background = shape(background, 20, Color.rgb(234, 235, 231))
+            }
+            page.addView(block, LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { bottomMargin = dp(14) })
+            return block
+        }
+
+        fun timeChip(parent: LinearLayout, key: String, h: Int, min: Int) {
+            val chip = TextView(this).apply {
                 textSize = 20f
-                isAllCaps = false
-                setTextColor(Color.rgb(30, 53, 82))
-                backgroundTintList = ColorStateList.valueOf(Color.WHITE)
-                text = String.format(java.util.Locale.getDefault(), "%02d:%02d", hour, minute)
+                setTypeface(null, Typeface.BOLD)
+                gravity = Gravity.CENTER
+                setTextColor(ink)
+                background = shape(Color.rgb(245, 246, 242), 13)
+                setPadding(dp(18), dp(12), dp(18), dp(12))
+                isClickable = true
+                isFocusable = true
+                contentDescription = "Изменить время"
                 setOnClickListener {
-                    val current = readTime(key, hour, minute)
+                    val current = readTime(key, h, min)
                     TimePickerDialog(
                         this@MainActivity,
-                        { _, h, min ->
+                        { _, hour, minute ->
                             getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-                                .edit().putInt(key, h * 60 + min).apply()
+                                .edit().putInt(key, hour * 60 + minute).apply()
                             updateTimeButtons()
                             if (getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
                                     .getBoolean(KEY_REMINDERS_ENABLED, false)) {
                                 ReminderScheduler.scheduleSavedTime(this@MainActivity, key)
                             }
-                        },
-                        current.first, current.second, true
+                        }, current.first, current.second, true
                     ).show()
                 }
             }
-            timeButtons[key] = button
-            parent.addView(button, LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
+            timeButtons[key] = chip
+            parent.addView(chip, LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
-            ).apply { bottomMargin = 4 })
+            ).apply {
+                rightMargin = dp(8)
+                bottomMargin = dp(9)
+            })
         }
-        text(page, "Сяоси", 36f, Color.rgb(33, 57, 92), true)
-        text(page, "Время для себя в течение дня", 17f, Color.rgb(105, 118, 139))
 
-        val active = card(Color.rgb(222, 237, 252))
-        text(active, "СЕЙЧАС", 14f, Color.rgb(49, 99, 163), true)
-        countdownLabel = TextView(this).apply {
-            textSize = 30f
-            setTypeface(null, Typeface.BOLD)
-            setTextColor(Color.rgb(31, 75, 128))
+        label(page, "СЯОСИ", 12f, accent, true, 9)
+        label(page, "Время замедлиться.", 29f, ink, true, 7)
+        label(page, "Небольшие паузы. Больше ясности.", 15f, muted, false, 26)
+
+        val currentCard = card(Color.rgb(232, 239, 233))
+        label(currentCard, "ТЕКУЩАЯ ПРАКТИКА", 11f, accent, true, 12)
+        countdownLabel = label(currentCard, "Всё спокойно", 29f, ink, true, 7)
+        label(currentCard, "Дыши ровно. Всё идёт своим чередом.", 13f, muted)
+
+        val xiaoxi = card()
+        label(xiaoxi, "01   /   ВОССТАНОВЛЕНИЕ", 11f, accent, true, 10)
+        label(xiaoxi, "Сяоси", 24f, ink, true, 7)
+        label(xiaoxi, "Закрой глаза на 10 минут, затем пройдись 5 минут.", 14f, muted, false, 17)
+        label(xiaoxi, "ПОНЕДЕЛЬНИК — ПЯТНИЦА", 11f, muted, true, 12)
+        val timeGrid = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
         }
-        active.addView(countdownLabel)
-
-        val xiaoxi = card(Color.rgb(224, 239, 253))
-        text(xiaoxi, "☀  Сяоси · Рабочие паузы", 22f, Color.rgb(30, 85, 150), true)
-        text(xiaoxi, "Пн–пт · 10 минут отдыха + 5 минут ходьбы", 15f, Color.rgb(66, 94, 129))
-        text(xiaoxi, "Нажми на время, чтобы изменить", 14f, Color.rgb(66, 94, 129))
-        listOf(11 to 0, 12 to 30, 14 to 0, 15 to 30, 17 to 0)
-            .forEachIndexed { index, pair ->
-                timeRow(xiaoxi, "time_xiaoxi_$index", pair.first, pair.second)
+        xiaoxi.addView(timeGrid)
+        val defaults = listOf(11 to 0, 12 to 30, 14 to 0, 15 to 30, 17 to 0)
+        for (rowIndex in 0..2) {
+            val row = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
             }
+            timeGrid.addView(row)
+            for (col in 0..1) {
+                val index = rowIndex * 2 + col
+                if (index < defaults.size) {
+                    val time = defaults[index]
+                    timeChip(row, "time_xiaoxi_$index", time.first, time.second)
+                }
+            }
+        }
 
-        val xiaoshi = card(Color.rgb(233, 226, 250))
-        text(xiaoshi, "☾  Сяоши · Дневной сон", 22f, Color.rgb(97, 64, 152), true)
-        text(xiaoshi, "Пн–пт · 25 минут спокойного отдыха", 15f, Color.rgb(103, 81, 134))
-        timeRow(xiaoshi, "time_xiaoshi", 13, 30)
+        val xiaoshi = card()
+        label(xiaoshi, "02   /   ОТДЫХ", 11f, Color.rgb(120, 100, 142), true, 10)
+        label(xiaoshi, "Сяоши", 24f, ink, true, 7)
+        label(xiaoshi, "25 минут дневного сна", 14f, muted, false, 16)
+        timeChip(xiaoshi, "time_xiaoshi", 13, 30)
 
-        val qigong = card(Color.rgb(220, 242, 230))
-        text(qigong, "✦  Цигун · Движение", 22f, Color.rgb(34, 114, 82), true)
-        text(qigong, "Пн–пт · 5 минут дыхания и плавных движений", 15f, Color.rgb(65, 111, 91))
-        timeRow(qigong, "time_qigong", 16, 30)
+        val qigong = card()
+        label(qigong, "03   /   ДВИЖЕНИЕ", 11f, Color.rgb(137, 107, 71), true, 10)
+        label(qigong, "Цигун", 24f, ink, true, 7)
+        label(qigong, "5 минут мягкого движения и дыхания", 14f, muted, false, 16)
+        timeChip(qigong, "time_qigong", 16, 30)
 
-        val actions = card(Color.rgb(238, 241, 246))
-        text(actions, "НАСТРОЙКИ И ПРОВЕРКА", 17f, Color.rgb(52, 67, 89), true)
-        enableButton = Button(this).apply {
-            textSize = 16f
-            setOnClickListener { enableReminders() }
-        }
-        testButton = Button(this).apply {
-            textSize = 14f
-            setOnClickListener { startTest() }
-        }
-        xiaoshiTestButton = Button(this).apply {
-            textSize = 14f
-            setOnClickListener { startXiaoshiTest() }
-        }
-        qigongTestButton = Button(this).apply {
-            textSize = 14f
-            setOnClickListener { startQigongTest() }
-        }
+        label(page, "Нажми на время, чтобы изменить расписание.", 13f, muted, false, 18)
+
+        val controls = card()
+        label(controls, "УПРАВЛЕНИЕ", 11f, muted, true, 12)
+        fun actionButton(onPress: () -> Unit): Button =
+            Button(this).apply {
+                isAllCaps = false
+                textSize = 14f
+                setTextColor(ink)
+                backgroundTintList = ColorStateList.valueOf(Color.rgb(236, 240, 235))
+                setOnClickListener { onPress() }
+            }
+        enableButton = actionButton { enableReminders() }
+        testButton = actionButton { startTest() }
+        xiaoshiTestButton = actionButton { startXiaoshiTest() }
+        qigongTestButton = actionButton { startQigongTest() }
         listOf(enableButton, testButton, xiaoshiTestButton, qigongTestButton)
-            .forEach { actions.addView(it) }
+            .forEach {
+                controls.addView(it, LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply { bottomMargin = dp(5) })
+            }
 
         setContentView(ScrollView(this).apply {
             isFillViewport = true
+            clipToPadding = false
             addView(page)
         })
         updateCountdown()
