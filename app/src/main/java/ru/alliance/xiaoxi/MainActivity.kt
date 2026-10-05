@@ -13,6 +13,7 @@ import android.provider.Settings
 import android.view.Gravity
 import android.widget.Button
 import android.widget.LinearLayout
+import android.widget.ScrollView
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
@@ -37,6 +38,14 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         createInterface()
         updateInterface()
+        // Apply newly added schedules once after an app update,
+        // without resetting in-progress practice timers.
+        val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+        if (prefs.getBoolean(KEY_REMINDERS_ENABLED, false) &&
+            prefs.getInt("schedule_version", 0) < 2) {
+            ReminderScheduler.scheduleAll(this)
+            prefs.edit().putInt("schedule_version", 2).apply()
+        }
     }
 
     private fun createInterface() {
@@ -124,7 +133,11 @@ class MainActivity : AppCompatActivity() {
         layout.addView(xiaoshiTestButton)
         layout.addView(qigongTestButton)
 
-        setContentView(layout)
+        val scrollView = ScrollView(this).apply {
+            isFillViewport = true
+            addView(layout)
+        }
+        setContentView(scrollView)
     }
 
     private fun updateInterface() {
@@ -165,6 +178,8 @@ class MainActivity : AppCompatActivity() {
         }
 
         ReminderScheduler.scheduleAll(this)
+        getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+            .edit().putInt("schedule_version", 2).apply()
 
         getSharedPreferences(
             PREFS_NAME,
