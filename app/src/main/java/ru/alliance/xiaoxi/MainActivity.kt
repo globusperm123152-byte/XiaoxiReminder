@@ -103,7 +103,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         testButton = Button(this).apply {
-            text = "ТЕСТ СЯОСИ — ЧЕРЕЗ 2 МИНУТЫ"
+            text = "ТЕСТ СЯОСИ — ЧЕРЕЗ 1 МИНУТУ"
             textSize = 15f
             setOnClickListener {
                 startTest()
@@ -111,7 +111,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         xiaoshiTestButton = Button(this).apply {
-            text = "ТЕСТ СЯОШИ — ЧЕРЕЗ 2 МИНУТЫ"
+            text = "ТЕСТ СЯОШИ — ЧЕРЕЗ 1 МИНУТУ"
             textSize = 15f
             setOnClickListener {
                 startXiaoshiTest()
@@ -119,7 +119,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         qigongTestButton = Button(this).apply {
-            text = "ТЕСТ ЦИГУН — ЧЕРЕЗ 2 МИНУТЫ"
+            text = "ТЕСТ ЦИГУН — ЧЕРЕЗ 1 МИНУТУ"
             textSize = 15f
             setOnClickListener {
                 startQigongTest()
