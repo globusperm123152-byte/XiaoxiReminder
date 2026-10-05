@@ -94,13 +94,13 @@ object ReminderScheduler {
         )
     }
 
-    // Тест Сяоси через 2 минуты
+    // Тест Сяоси через 1 минуту
     fun scheduleTest(context: Context) {
 
         scheduleAlarmClock(
             context,
             -1,
-            System.currentTimeMillis() + 2 * 60 * 1000L,
+            System.currentTimeMillis() + 1 * 60 * 1000L,
             0,
             0,
             "regular",
@@ -108,13 +108,13 @@ object ReminderScheduler {
         )
     }
 
-    // Тест Сяоши через 2 минуты
+    // Тест Сяоши через 1 минуту
     fun scheduleXiaoshiTest(context: Context) {
 
         scheduleAlarmClock(
             context,
             3004,
-            System.currentTimeMillis() + 2 * 60 * 1000L,
+            System.currentTimeMillis() + 1 * 60 * 1000L,
             0,
             0,
             "xiaoshi_test",
@@ -122,13 +122,13 @@ object ReminderScheduler {
         )
     }
 
-    // Тест Цигун через 2 минуты
+    // Тест Цигун через 1 минуту
     fun scheduleQigongTest(context: Context) {
 
         scheduleAlarmClock(
             context,
             4004,
-            System.currentTimeMillis() + 2 * 60 * 1000L,
+            System.currentTimeMillis() + 1 * 60 * 1000L,
             0,
             0,
             "qigong_test",
