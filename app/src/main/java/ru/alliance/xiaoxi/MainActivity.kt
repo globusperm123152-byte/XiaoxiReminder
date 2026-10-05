@@ -7,6 +7,11 @@ import android.app.NotificationManager
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Color
+import android.graphics.Typeface
+import android.graphics.drawable.GradientDrawable
+import android.content.res.ColorStateList
+import android.os.Handler
+import android.os.Looper
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -22,6 +27,14 @@ import androidx.core.app.ActivityCompat
 class MainActivity : AppCompatActivity() {
 
     private lateinit var enableButton: Button
+    private lateinit var countdownLabel: TextView
+    private val countdownHandler = Handler(Looper.getMainLooper())
+    private val countdownTick = object : Runnable {
+        override fun run() {
+            updateCountdown()
+            countdownHandler.postDelayed(this, 1000L)
+        }
+    }
     private val timeButtons = mutableMapOf<String, Button>()
     private lateinit var testButton: Button
     private lateinit var xiaoshiTestButton: Button
@@ -50,42 +63,54 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun rounded(color: Int, radius: Float = 28f): GradientDrawable =
+        GradientDrawable().apply {
+            cornerRadius = radius
+            setColor(color)
+        }
+
     private fun createInterface() {
-
-        val layout = LinearLayout(this).apply {
+        val page = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(60, 60, 60, 60)
+            setPadding(36, 38, 36, 48)
+            setBackgroundColor(Color.rgb(245, 248, 253))
         }
-
-        val title = TextView(this).apply {
-            text = "Сяоси"
-            textSize = 34f
-            setTextColor(Color.BLACK)
-            gravity = Gravity.CENTER_HORIZONTAL
+        fun card(color: Int): LinearLayout {
+            val content = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                setPadding(28, 24, 28, 26)
+                background = rounded(color)
+                elevation = 5f
+            }
+            page.addView(content, LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { bottomMargin = 22 })
+            return content
         }
-
-        fun heading(textValue: String) {
-            layout.addView(TextView(this).apply {
-                text = textValue
-                textSize = 19f
-                setTextColor(Color.DKGRAY)
-                setPadding(0, 22, 0, 6)
+        fun text(parent: LinearLayout, value: String, size: Float, color: Int, bold: Boolean = false) {
+            parent.addView(TextView(this).apply {
+                this.text = value
+                textSize = size
+                setTextColor(color)
+                if (bold) setTypeface(null, Typeface.BOLD)
+                setPadding(0, 5, 0, 9)
             })
         }
-
-        fun timeRow(key: String, hour: Int, minute: Int) {
+        fun timeRow(parent: LinearLayout, key: String, hour: Int, minute: Int) {
             val button = Button(this).apply {
-                textSize = 18f
+                textSize = 20f
                 isAllCaps = false
+                setTextColor(Color.rgb(30, 53, 82))
+                backgroundTintList = ColorStateList.valueOf(Color.WHITE)
                 text = String.format(java.util.Locale.getDefault(), "%02d:%02d", hour, minute)
                 setOnClickListener {
                     val current = readTime(key, hour, minute)
                     TimePickerDialog(
                         this@MainActivity,
-                        { _, selectedHour, selectedMinute ->
-                            val total = selectedHour * 60 + selectedMinute
+                        { _, h, min ->
                             getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-                                .edit().putInt(key, total).apply()
+                                .edit().putInt(key, h * 60 + min).apply()
                             updateTimeButtons()
                             if (getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
                                     .getBoolean(KEY_REMINDERS_ENABLED, false)) {
@@ -97,65 +122,93 @@ class MainActivity : AppCompatActivity() {
                 }
             }
             timeButtons[key] = button
-            layout.addView(button)
+            parent.addView(button, LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { bottomMargin = 4 })
         }
+        text(page, "Сяоси", 36f, Color.rgb(33, 57, 92), true)
+        text(page, "Время для себя в течение дня", 17f, Color.rgb(105, 118, 139))
 
-        heading("РАБОЧИЕ ПАУЗЫ — СЯОСИ")
-        heading("Понедельник — пятница. Нажми на время, чтобы изменить:")
+        val active = card(Color.rgb(222, 237, 252))
+        text(active, "СЕЙЧАС", 14f, Color.rgb(49, 99, 163), true)
+        countdownLabel = TextView(this).apply {
+            textSize = 30f
+            setTypeface(null, Typeface.BOLD)
+            setTextColor(Color.rgb(31, 75, 128))
+        }
+        active.addView(countdownLabel)
+
+        val xiaoxi = card(Color.rgb(224, 239, 253))
+        text(xiaoxi, "☀  Сяоси · Рабочие паузы", 22f, Color.rgb(30, 85, 150), true)
+        text(xiaoxi, "Пн–пт · 10 минут отдыха + 5 минут ходьбы", 15f, Color.rgb(66, 94, 129))
+        text(xiaoxi, "Нажми на время, чтобы изменить", 14f, Color.rgb(66, 94, 129))
         listOf(11 to 0, 12 to 30, 14 to 0, 15 to 30, 17 to 0)
-            .forEachIndexed { index, time ->
-                timeRow("time_xiaoxi_$index", time.first, time.second)
+            .forEachIndexed { index, pair ->
+                timeRow(xiaoxi, "time_xiaoxi_$index", pair.first, pair.second)
             }
-        heading("10 минут — закрыть глаза; 5 минут — спокойно походить")
-        heading("СЯОШИ — ДНЕВНОЙ СОН")
-        timeRow("time_xiaoshi", 13, 30)
-        heading("25 минут отдыха")
-        heading("ЦИГУН")
-        timeRow("time_qigong", 16, 30)
-        heading("5 минут — дыхание и плавные движения")
 
+        val xiaoshi = card(Color.rgb(233, 226, 250))
+        text(xiaoshi, "☾  Сяоши · Дневной сон", 22f, Color.rgb(97, 64, 152), true)
+        text(xiaoshi, "Пн–пт · 25 минут спокойного отдыха", 15f, Color.rgb(103, 81, 134))
+        timeRow(xiaoshi, "time_xiaoshi", 13, 30)
+
+        val qigong = card(Color.rgb(220, 242, 230))
+        text(qigong, "✦  Цигун · Движение", 22f, Color.rgb(34, 114, 82), true)
+        text(qigong, "Пн–пт · 5 минут дыхания и плавных движений", 15f, Color.rgb(65, 111, 91))
+        timeRow(qigong, "time_qigong", 16, 30)
+
+        val actions = card(Color.rgb(238, 241, 246))
+        text(actions, "НАСТРОЙКИ И ПРОВЕРКА", 17f, Color.rgb(52, 67, 89), true)
         enableButton = Button(this).apply {
-            textSize = 17f
-            setOnClickListener {
-                enableReminders()
-            }
+            textSize = 16f
+            setOnClickListener { enableReminders() }
         }
-
         testButton = Button(this).apply {
-            text = "ТЕСТ СЯОСИ — ЧЕРЕЗ 1 МИНУТУ"
-            textSize = 15f
-            setOnClickListener {
-                startTest()
-            }
+            textSize = 14f
+            setOnClickListener { startTest() }
         }
-
         xiaoshiTestButton = Button(this).apply {
-            text = "ТЕСТ СЯОШИ — ЧЕРЕЗ 1 МИНУТУ"
-            textSize = 15f
-            setOnClickListener {
-                startXiaoshiTest()
-            }
+            textSize = 14f
+            setOnClickListener { startXiaoshiTest() }
         }
-
         qigongTestButton = Button(this).apply {
-            text = "ТЕСТ ЦИГУН — ЧЕРЕЗ 1 МИНУТУ"
-            textSize = 15f
-            setOnClickListener {
-                startQigongTest()
-            }
+            textSize = 14f
+            setOnClickListener { startQigongTest() }
         }
+        listOf(enableButton, testButton, xiaoshiTestButton, qigongTestButton)
+            .forEach { actions.addView(it) }
 
-        layout.addView(title)
-        layout.addView(enableButton)
-        layout.addView(testButton)
-        layout.addView(xiaoshiTestButton)
-        layout.addView(qigongTestButton)
-
-        val scrollView = ScrollView(this).apply {
+        setContentView(ScrollView(this).apply {
             isFillViewport = true
-            addView(layout)
+            addView(page)
+        })
+        updateCountdown()
+    }
+
+    private fun updateCountdown() {
+        if (!::countdownLabel.isInitialized) return
+        val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+        val now = System.currentTimeMillis()
+        val entries = listOf(
+            Triple("Сяоси · глаза закрыты", "countdown_xiaoxi_eyes", 0),
+            Triple("Сяоси · ходьба", "countdown_xiaoxi_walk", 0),
+            Triple("Сяоши · отдых", "countdown_xiaoshi", 0),
+            Triple("Цигун · дыхание", "countdown_qigong", 0)
+        )
+        val current = entries.map { it.first to prefs.getLong(it.second, 0L) }
+            .filter { it.second > now }
+            .minByOrNull { it.second }
+        countdownLabel.text = if (current == null) {
+            "Всё спокойно ☺"
+        } else {
+            val seconds = ((current.second - now + 999L) / 1000L).coerceAtLeast(0L)
+            val minutes = seconds / 60
+            val secs = seconds % 60
+            current.first + "\n" + String.format(
+                java.util.Locale.getDefault(), "%02d:%02d", minutes, secs
+            )
         }
-        setContentView(scrollView)
     }
 
     private fun readTime(key: String, defaultHour: Int, defaultMinute: Int): Pair<Int, Int> {
@@ -383,6 +436,11 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    override fun onPause() {
+        countdownHandler.removeCallbacks(countdownTick)
+        super.onPause()
+    }
+
     override fun onRequestPermissionsResult(
         requestCode: Int,
         permissions: Array<out String>,
@@ -405,6 +463,8 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        countdownHandler.removeCallbacks(countdownTick)
+        countdownHandler.post(countdownTick)
 
         // A test button is only locked while its one-minute alarm is pending.
         // Returning from an alarm or reopening the app refreshes its state.
