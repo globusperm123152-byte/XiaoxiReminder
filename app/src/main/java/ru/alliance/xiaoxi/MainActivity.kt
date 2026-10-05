@@ -66,10 +66,10 @@ class MainActivity : AppCompatActivity() {
     private fun dp(value: Int): Int =
         (value * resources.displayMetrics.density + 0.5f).toInt()
 
-    private val ink = Color.rgb(34, 42, 46)
-    private val muted = Color.rgb(113, 120, 122)
-    private val canvasColor = Color.rgb(248, 248, 245)
-    private val accent = Color.rgb(56, 105, 93)
+    private val ink = Color.rgb(242, 233, 217)
+    private val muted = Color.rgb(181, 169, 151)
+    private val canvasColor = Color.rgb(37, 39, 40)
+    private val accent = Color.rgb(209, 165, 108)
 
     private fun shape(color: Int, radius: Int = 18, border: Int? = null): GradientDrawable =
         GradientDrawable().apply {
@@ -83,8 +83,7 @@ class MainActivity : AppCompatActivity() {
         window.navigationBarColor = canvasColor
         @Suppress("DEPRECATION")
         window.decorView.systemUiVisibility =
-            android.view.View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR or
-            android.view.View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
+            0
 
         val page = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -111,11 +110,11 @@ class MainActivity : AppCompatActivity() {
             return view
         }
 
-        fun card(background: Int = Color.WHITE): LinearLayout {
+        fun card(background: Int = Color.rgb(51, 53, 53)): LinearLayout {
             val block = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
                 setPadding(dp(20), dp(20), dp(20), dp(20))
-                this.background = shape(background, 20, Color.rgb(234, 235, 231))
+                this.background = shape(background, 20, Color.rgb(85, 80, 73))
             }
             page.addView(block, LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
@@ -130,7 +129,7 @@ class MainActivity : AppCompatActivity() {
                 setTypeface(null, Typeface.BOLD)
                 gravity = Gravity.CENTER
                 setTextColor(ink)
-                background = shape(Color.rgb(245, 246, 242), 13)
+                background = shape(Color.rgb(70, 69, 65), 13)
                 setPadding(dp(18), dp(12), dp(18), dp(12))
                 isClickable = true
                 isFocusable = true
@@ -165,7 +164,7 @@ class MainActivity : AppCompatActivity() {
         label(page, "Время замедлиться.", 29f, ink, true, 7)
         label(page, "Небольшие паузы. Больше ясности.", 15f, muted, false, 26)
 
-        val currentCard = card(Color.rgb(232, 239, 233))
+        val currentCard = card(Color.rgb(63, 61, 57))
         label(currentCard, "ТЕКУЩАЯ ПРАКТИКА", 11f, accent, true, 12)
         countdownLabel = label(currentCard, "Всё спокойно", 29f, ink, true, 7)
         label(currentCard, "Дыши ровно. Всё идёт своим чередом.", 13f, muted)
@@ -195,13 +194,13 @@ class MainActivity : AppCompatActivity() {
         }
 
         val xiaoshi = card()
-        label(xiaoshi, "02   /   ОТДЫХ", 11f, Color.rgb(120, 100, 142), true, 10)
+        label(xiaoshi, "02   /   ОТДЫХ", 11f, Color.rgb(191, 158, 129), true, 10)
         label(xiaoshi, "Сяоши", 24f, ink, true, 7)
         label(xiaoshi, "25 минут дневного сна", 14f, muted, false, 16)
         timeChip(xiaoshi, "time_xiaoshi", 13, 30)
 
         val qigong = card()
-        label(qigong, "03   /   ДВИЖЕНИЕ", 11f, Color.rgb(137, 107, 71), true, 10)
+        label(qigong, "03   /   ДВИЖЕНИЕ", 11f, Color.rgb(191, 166, 125), true, 10)
         label(qigong, "Цигун", 24f, ink, true, 7)
         label(qigong, "5 минут мягкого движения и дыхания", 14f, muted, false, 16)
         timeChip(qigong, "time_qigong", 16, 30)
@@ -215,7 +214,7 @@ class MainActivity : AppCompatActivity() {
                 isAllCaps = false
                 textSize = 14f
                 setTextColor(ink)
-                backgroundTintList = ColorStateList.valueOf(Color.rgb(236, 240, 235))
+                backgroundTintList = ColorStateList.valueOf(Color.rgb(91, 83, 72))
                 setOnClickListener { onPress() }
             }
         enableButton = actionButton { enableReminders() }
