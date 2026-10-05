@@ -62,10 +62,10 @@ class ReminderReceiver : BroadcastReceiver() {
                 "Пора сделать отложенную паузу"
 
             alarmType == "xiaoshi_test" ->
-                "Тест дневного сна — 2 минуты"
+                "Тест дневного сна — 1 минута"
 
             alarmType == "xiaoshi_timer_test" ->
-                "Тест сна завершён — 2 минуты"
+                "Тест сна завершён — 1 минута"
 
             alarmType == "xiaoshi" ->
                 "Время дневного сна"
@@ -77,10 +77,10 @@ class ReminderReceiver : BroadcastReceiver() {
                 "Пора на отложенный дневной сон"
 
             alarmType == "qigong_test" ->
-                "Тест Цигун — 2 минуты"
+                "Тест Цигун — 1 минута"
 
             alarmType == "qigong_timer_test" ->
-                "Тест Цигун завершён — 2 минуты"
+                "Тест Цигун завершён — 1 минута"
 
             alarmType == "qigong" ->
                 "Время сделать Цигун"
