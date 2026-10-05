@@ -105,6 +105,8 @@ class AlarmActivity : AppCompatActivity() {
             alarmType == "xiaoshi" ||
             alarmType == "xiaoshi_snooze" ||
             alarmType == "qigong" ||
+            alarmType == "qigong_test" ||
+            alarmType == "xiaoshi_test" ||
             alarmType == "qigong_snooze"
         ) {
 
@@ -128,6 +130,8 @@ class AlarmActivity : AppCompatActivity() {
         return (
             alarmType == "xiaoshi" ||
             alarmType == "xiaoshi_timer" ||
+            alarmType == "xiaoshi_timer_test" ||
+            alarmType == "xiaoshi_test" ||
             alarmType == "xiaoshi_snooze"
         )
     }
@@ -137,6 +141,8 @@ class AlarmActivity : AppCompatActivity() {
         return (
             alarmType == "qigong" ||
             alarmType == "qigong_timer" ||
+            alarmType == "qigong_timer_test" ||
+            alarmType == "qigong_test" ||
             alarmType == "qigong_snooze"
         )
     }
@@ -144,6 +150,30 @@ class AlarmActivity : AppCompatActivity() {
     private fun getMessage(): String {
 
         return when {
+
+            alarmType == "qigong_timer_test" -> """
+                Тест Цигун завершён ✓
+
+                2 минуты закончились
+            """.trimIndent()
+
+            alarmType == "qigong_test" -> """
+                Тест Цигун
+
+                2 минуты — дыхание и плавные движения
+            """.trimIndent()
+
+            alarmType == "xiaoshi_timer_test" -> """
+                Тест Сяоши завершён ✓
+
+                2 минуты отдыха закончились
+            """.trimIndent()
+
+            alarmType == "xiaoshi_test" -> """
+                Тест Сяоши
+
+                2 минуты отдыха
+            """.trimIndent()
 
             alarmType == "qigong_timer" -> """
                 
@@ -255,6 +285,12 @@ class AlarmActivity : AppCompatActivity() {
 
         return when {
 
+            alarmType == "qigong_timer_test" ->
+                "ГОТОВО"
+
+            alarmType == "xiaoshi_timer_test" ->
+                "ГОТОВО"
+
             alarmType == "qigong_timer" ->
                 "ГОТОВО"
 
@@ -279,16 +315,23 @@ class AlarmActivity : AppCompatActivity() {
 
         when {
 
+            alarmType == "qigong_timer_test" ||
+            alarmType == "xiaoshi_timer_test" -> {
+                finish()
+            }
+
             alarmType == "qigong_timer" -> {
                 finish()
             }
 
             alarmType == "qigong" ||
+            alarmType == "qigong_test" ||
             alarmType == "qigong_snooze" -> {
 
                 ReminderScheduler.scheduleQigongTimer(
                     context = this,
-                    minutes = 5
+                    minutes = if (alarmType == "qigong_test") 2 else 5,
+                    isTest = alarmType == "qigong_test"
                 )
 
                 finish()
@@ -299,11 +342,13 @@ class AlarmActivity : AppCompatActivity() {
             }
 
             alarmType == "xiaoshi" ||
+            alarmType == "xiaoshi_test" ||
             alarmType == "xiaoshi_snooze" -> {
 
                 ReminderScheduler.scheduleXiaoshiTimer(
                     context = this,
-                    minutes = 25
+                    minutes = if (alarmType == "xiaoshi_test") 2 else 25,
+                    isTest = alarmType == "xiaoshi_test"
                 )
 
                 finish()
